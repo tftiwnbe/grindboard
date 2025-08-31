@@ -81,3 +81,29 @@ uv run alembic revision --autogenerate -m "your message"
 # Downgrade one step
 uv run alembic downgrade -1
 ```
+
+## Deploy (GH Actions)
+
+- Container image builds to `ghcr.io/tftiwnbe/grindboard-api` on pushes to `main` and tags `v*`.
+- The workflow SSHes to server and runs Docker Compose in `~/grindboard`.
+
+GitHub repository secrets (Settings → Secrets and variables → Actions):
+
+- Environment - production
+- `DEPLOY_HOST`: your server IP/host
+- `DEPLOY_USER`: SSH user (must be in `docker` group)
+- `DEPLOY_SSH_KEY`: private key for that user (PEM)
+- `DEPLOY_SSH_KEY_PASSPHRASE` (optional): passphrase if the key is protected
+- `GHCR_USER` and `GHCR_PAT` (optional): only if your GHCR image is private; skip if public
+
+Deploy flow:
+
+- On push to `main` or creating a `v*` tag: builds and pushes `ghcr.io/tftiwnbe/grindboard-api`.
+- Then copies `deploy/compose.yml` to `~/grindboard/compose.yml` and runs:
+  - pull latest image
+  - run `alembic upgrade head`
+  - start/update the service with restart policy
+
+Environment for production is hardcoded in `deploy/compose.yml`.
+
+Service runs on `:8000` by default. Put a reverse proxy in front if needed.

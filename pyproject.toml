@@ -1,0 +1,18 @@
+[project]
+name = "grindboard-api"
+version = "0.1.0"
+description = "A minimal, async FastAPI backend for managing tasks"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aiosqlite>=0.21.0",
+    "alembic>=1.16.5",
+    "fastapi[standard-no-fastapi-cloud-cli]>=0.116.1",
+    "greenlet>=3.2.4",
+    "pydantic-settings>=2.10.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=1.1.0",
+]

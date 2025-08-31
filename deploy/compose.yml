@@ -1,0 +1,29 @@
+services:
+  api:
+    image: ghcr.io/tftiwnbe/grindboard-api:latest
+    container_name: grindboard-api
+    restart: unless-stopped
+
+    environment:
+      - PROJECT_NAME=Grindboard
+      - ECHO_SQL=false
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=sqlite+aiosqlite:///./data/tasks.db
+      - TZ=UTC
+    ports:
+      - 127.0.0.1:8000:8000
+    volumes:
+      - ./data:/app/data
+    working_dir: /app
+
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/docs"]
+      interval: 900s
+      timeout: 5s
+      retries: 5
+
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M

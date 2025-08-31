@@ -1,0 +1,11 @@
+.git
+.venv
+__pycache__
+.pytest_cache
+dev.db*
+prev-dev.db
+dist
+*.pyc
+*.pyo
+*.pyd
+alembic/versions.bak

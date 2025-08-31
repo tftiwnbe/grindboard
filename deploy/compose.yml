@@ -5,15 +5,13 @@ services:
     restart: unless-stopped
 
     environment:
-      - PROJECT_NAME=Grindboard
+      - DATABASE_URL=sqlite+aiosqlite:///./data/tasks.db
       - ECHO_SQL=false
       - LOG_LEVEL=INFO
-      - DATABASE_URL=sqlite+aiosqlite:///./data/tasks.db
-      - TZ=UTC
     ports:
       - 127.0.0.1:8000:8000
     volumes:
-      - ./data:/app/data
+      - ../data:/app/data
     working_dir: /app
 
     healthcheck:

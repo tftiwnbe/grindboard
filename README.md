@@ -69,6 +69,20 @@ Well..
 - `PUT /tasks/{id}` responds with partial fields (per `TaskUpdate`), not the full `Task`.
 - The complete endpoint toggles the `completed` flag; it is not idempotent.
 
+## Authentication (optional)
+
+- Enable auth by setting `AUTH_ENABLED=true` in `.env`. When enabled, all `/tasks` routes require a `Bearer` token (FastAPI security: HTTPBearer).
+- Token lifetime is configurable via `TOKEN_TTL_MINUTES` (default 1440 minutes).
+- Sessions: by default, a new login invalidates previous tokens (single-session). To allow multiple concurrent logins per user, set `MAX_TOKENS_PER_USER` to a number greater than 1.
+  - Expired tokens are cleaned up opportunistically on login.
+
+### Endpoint
+
+- `POST /auth/login` — body: `{ "username": "alice", "password": "secret123" }`
+  - If the user does not exist, it is created and a token is issued.
+  - If the user exists, credentials are verified and a token is issued.
+  - Response: `{ "token": "..." }`
+
 ## Migrations
 
 ```bash

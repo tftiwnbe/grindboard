@@ -1,7 +1,7 @@
 services:
   api:
-    image: ghcr.io/tftiwnbe/grindboard-api:latest
-    container_name: grindboard-api
+    image: ghcr.io/tftiwnbe/grindboard:latest
+    container_name: grindboard
     restart: unless-stopped
 
     environment:

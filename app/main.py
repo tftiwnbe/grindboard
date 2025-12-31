@@ -19,10 +19,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(lifespan=lifespan, title=settings.project_name)
 
 app.include_router(auth_router)
-if settings.auth_enabled:
-    app.include_router(tasks_router, dependencies=[Depends(require_auth)])
-else:
-    app.include_router(tasks_router)
+app.include_router(tasks_router)
 
 if __name__ == "__main__":
     uvicorn.run(

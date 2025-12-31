@@ -1,12 +1,7 @@
-from typing import Any
-
 from fastapi.testclient import TestClient
 
+from tests.conftest import login as _login
 
-def _login(client: TestClient, username: str, password: str = "secret123") -> tuple[int, dict[str, Any]]:
-    r = client.post("/auth/login", json={"username": username, "password": password})
-    content_type = r.headers.get("content-type") or ""
-    return r.status_code, r.json() if content_type.startswith("application/json") else {}
 
 
 def test_login_creates_user_and_returns_token(client: TestClient):

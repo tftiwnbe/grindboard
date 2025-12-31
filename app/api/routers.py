@@ -4,7 +4,7 @@ from typing import Annotated
 from app.api.schemas import Task, TaskCreate, TaskUpdate, TokenOut, UserLogin
 from app.database import crud, models
 from app.dependencies import DBSessionDep
-from app.security import hash_password, verify_password, optional_current_user
+from app.security import create_access_token, hash_password, verify_password, require_auth
 
 tasks_router = APIRouter(prefix="/tasks")
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
@@ -12,8 +12,7 @@ auth_router = APIRouter(prefix="/auth", tags=["auth"])
 
 @tasks_router.get("/", response_model=list[Task])
 async def tasks_list(
-    db: DBSessionDep,
-    user: Annotated[models.User | None, Depends(optional_current_user)] = None,
+    db: DBSessionDep, user: Annotated[models.User, Depends(require_auth)]
 ):
     return await crud.get_tasks(db, user)
 
@@ -22,7 +21,7 @@ async def tasks_list(
 async def create_task(
     task: TaskCreate,
     db: DBSessionDep,
-    user: Annotated[models.User | None, Depends(optional_current_user)] = None,
+    user: Annotated[models.User, Depends(require_auth)],
 ):
     return await crud.create_task(db, task, user)
 
@@ -32,7 +31,7 @@ async def update_task(
     id: int,
     task: TaskUpdate,
     db: DBSessionDep,
-    user: Annotated[models.User | None, Depends(optional_current_user)] = None,
+    user: Annotated[models.User, Depends(require_auth)],
 ):
     updated = await crud.update_task(db, task, id, user)
     if not updated:
@@ -44,7 +43,7 @@ async def update_task(
 async def complete_task(
     id: int,
     db: DBSessionDep,
-    user: Annotated[models.User | None, Depends(optional_current_user)] = None,
+    user: Annotated[models.User, Depends(require_auth)],
 ):
     completed = await crud.complete_task(db, id, user)
     if not completed:
@@ -56,7 +55,7 @@ async def complete_task(
 async def delete_task(
     id: int,
     db: DBSessionDep,
-    user: Annotated[models.User | None, Depends(optional_current_user)] = None,
+    user: Annotated[models.User, Depends(require_auth)],
 ):
     deleted = await crud.delete_task(db, id, user)
     if not deleted:
@@ -76,5 +75,5 @@ async def login(payload: UserLogin, db: DBSessionDep):
     else:
         if not verify_password(payload.password, user.password_hash):
             raise HTTPException(401, detail="Invalid credentials")
-    token = await crud.create_token(db, user)
-    return TokenOut(token=token.token)
+    token = create_access_token({"sub": str(user.id)})
+    return TokenOut(token=token)

@@ -13,13 +13,13 @@ class Settings(BaseSettings):
     # Base
     project_name: str = "Grindboard"
     database_url: str = "sqlite+aiosqlite:///./dev.db"
-    echo_sql: bool = True
+    echo_sql: bool = False
     log_level: str = "INFO"
 
-    # Auth
-    auth_enabled: bool = False
-    max_tokens_per_user: int = 1
+    # Auth (JWT)
     token_ttl_minutes: int = 60 * 24  # 24h by default
+    jwt_secret_key: str = "change-me"  # override via env for production
+    jwt_algorithm: str = "HS256"
 
 
 settings = Settings()

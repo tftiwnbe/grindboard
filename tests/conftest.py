@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from typing import Any
 
 from alembic import command
 from alembic.config import Config
@@ -29,6 +30,23 @@ def app() -> Generator[FastAPI, None, None]:
 def client(app: FastAPI):
     with TestClient(app) as c:
         yield c
+
+
+def login(
+    client: TestClient, username: str = "alice", password: str = "secret123"
+) -> tuple[int, dict[str, Any]]:
+    r = client.post("/auth/login", json={"username": username, "password": password})
+    content_type = r.headers.get("content-type") or ""
+    body = r.json() if content_type.startswith("application/json") else {}
+    return r.status_code, body
+
+
+@pytest.fixture
+def auth_headers(client: TestClient) -> dict[str, str]:
+    status, body = login(client)
+    assert status == 200
+    token = body.get("token") or ""
+    return {"Authorization": f"Bearer {token}"}
 
 
 # Reuse a single event loop per session

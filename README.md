@@ -98,7 +98,7 @@ uv run alembic downgrade -1
 
 ## Deploy (GH Actions)
 
-- Container image builds to `ghcr.io/tftiwnbe/grindboard-api` on pushes to `main` and tags `v*`.
+- Container image builds to `ghcr.io/tftiwnbe/grindboard` on pushes to `main` and tags `v*`.
 - The workflow SSHes to server and runs Docker Compose in `~/grindboard`.
 
 GitHub repository secrets (Settings → Secrets and variables → Actions):
@@ -112,7 +112,7 @@ GitHub repository secrets (Settings → Secrets and variables → Actions):
 
 Deploy flow:
 
-- On push to `main` or creating a `v*` tag: builds and pushes `ghcr.io/tftiwnbe/grindboard-api`.
+- On push to `main` or creating a `v*` tag: builds and pushes `ghcr.io/tftiwnbe/grindboard`.
 - Then copies `deploy/compose.yml` to `~/grindboard/compose.yml` and runs:
   - pull latest image
   - run `alembic upgrade head`

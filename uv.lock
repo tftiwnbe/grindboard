@@ -170,7 +170,7 @@ wheels = [
 ]
 
 [[package]]
-name = "grindboard-api"
+name = "grindboard"
 version = "1.0.0"
 source = { virtual = "." }
 dependencies = [

@@ -1,14 +1,16 @@
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
+from sqlmodel import SQLModel
 
-from app.config import settings
-from app.database.models import Base
+from alembic import context
+from app import models  # noqa: F401
+from app.config import get_settings
 
 config = context.config
+_models = models
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -16,8 +18,8 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 #  model's MetaData object
-target_metadata = [Base.metadata]
-database_url = settings.database_url
+target_metadata = [SQLModel.metadata]
+database_url = get_settings().app.database_url
 
 
 def run_migrations_offline() -> None:

@@ -1,12 +1,13 @@
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routers import auth_router, tasks_router
-from app.config import settings
-from app.database import sessionmanager
-from app.security import require_auth
+from app.config import get_settings
+from app.core.database import sessionmanager
+from app.tasks.router import router as tasks_router
+from app.users.router import router as users_router
 
 
 @asynccontextmanager
@@ -16,15 +17,21 @@ async def lifespan(_app: FastAPI):
         await sessionmanager.close()
 
 
-app = FastAPI(lifespan=lifespan, title=settings.project_name)
+settings = get_settings()
+if not settings.app.config_path.exists():
+    settings.save_settings()
 
-app.include_router(auth_router)
+app = FastAPI(lifespan=lifespan, title=settings.app.project_name)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.app.cors_allow_origins,
+    allow_methods=settings.app.cors_allow_methods,
+    allow_headers=settings.app.cors_allow_headers,
+    allow_credentials=settings.app.cors_allow_credentials,
+)
+app.include_router(users_router)
 app.include_router(tasks_router)
 
+
 if __name__ == "__main__":
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        reload=True,
-        port=8000,
-    )
+    uvicorn.run("app.main:app", host=settings.server.host, port=settings.server.port)

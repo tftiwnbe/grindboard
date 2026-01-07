@@ -1,7 +1,7 @@
 [project]
 name = "grindboard"
-version = "1.0.0"
-description = "A minimal, async FastAPI backend for managing tasks"
+version = "2.0.0"
+description = "A minimal FastAPI backend for tasks management"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -11,6 +11,7 @@ dependencies = [
     "greenlet>=3.2.4",
     "pydantic-settings>=2.10.1",
     "python-jose[cryptography]>=3.5.0",
+    "sqlmodel>=0.0.31",
 ]
 
 [dependency-groups]

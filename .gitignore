@@ -12,3 +12,4 @@ wheels/
 # Project related
 .env
 *.db
+config/

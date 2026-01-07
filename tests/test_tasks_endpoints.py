@@ -2,7 +2,7 @@ from typing import Any, cast
 
 from fastapi.testclient import TestClient
 
-from app.api.schemas import Task
+from app.models import Task
 
 
 def _create_task(client: TestClient, headers: dict[str, str], **overrides: object) -> Task:
@@ -12,7 +12,6 @@ def _create_task(client: TestClient, headers: dict[str, str], **overrides: objec
     } | overrides
     r = client.post("/tasks/", json=payload, headers=headers)
     assert r.status_code == 200
-    # Parse JSON into Pydantic model for attribute access
     return Task.model_validate(r.json())
 
 
@@ -36,7 +35,7 @@ def test_update_returns_update_fields_only(client: TestClient, auth_headers: dic
     assert r.status_code == 200
     body = cast(dict[str, Any], r.json())
     assert body["title"] == "new"
-    assert "completed" not in body and "id" not in body  # TaskUpdate response_model
+    assert "completed" not in body and "id" not in body
 
 
 def test_complete_toggles(client: TestClient, auth_headers: dict[str, str]):

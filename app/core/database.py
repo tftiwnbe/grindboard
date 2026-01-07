@@ -5,28 +5,36 @@ from typing import Any
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
     AsyncEngine,
-    AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
+from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.config import settings
+from app.config import get_settings
 
 
 class DatabaseSessionManager:
+    """Create and manage shared async SQLAlchemy engine and session factories."""
+
     def __init__(self, host: str, engine_kwargs: Mapping[str, Any] | None = None):
         self._engine: AsyncEngine | None = create_async_engine(
             host, **(engine_kwargs) or {}
         )
         self._sessionmaker: async_sessionmaker[AsyncSession] | None = (
-            async_sessionmaker(bind=self._engine, expire_on_commit=False)
+            async_sessionmaker(
+                bind=self._engine,
+                expire_on_commit=False,
+                class_=AsyncSession,
+            )
         )
 
     @property
     def engine(self):
+        """Return the lazily-instantiated async engine."""
         return self._engine
 
     async def close(self):
+        """Dispose the underlying engine and clear cached factories."""
         if self._engine is None:
             raise Exception("DatabaseSessionManager is not initialized")
         await self._engine.dispose()
@@ -36,18 +44,16 @@ class DatabaseSessionManager:
 
     @contextlib.asynccontextmanager
     async def connect(self) -> AsyncIterator[AsyncConnection]:
+        """Provide a transactional connection that rolls back if an error occurs."""
         if self._engine is None:
             raise Exception("DatabaseSessionManager is not initialized")
 
         async with self._engine.begin() as connection:
-            try:
-                yield connection
-            except Exception:
-                await connection.rollback()
-                raise
+            yield connection
 
     @contextlib.asynccontextmanager
     async def session(self) -> AsyncIterator[AsyncSession]:
+        """Yield an AsyncSession that automatically rolls back on error."""
         if self._sessionmaker is None:
             raise Exception("DatabaseSessionManager is not initialized")
 
@@ -61,11 +67,10 @@ class DatabaseSessionManager:
             await session.close()
 
 
-sessionmanager = DatabaseSessionManager(
-    settings.database_url, {"echo": settings.echo_sql}
-)
+sessionmanager = DatabaseSessionManager(get_settings().app.database_url)
 
 
-async def get_db_session():
+async def get_database_session():
+    """FastAPI dependency that yields a managed AsyncSession."""
     async with sessionmanager.session() as session:
         yield session

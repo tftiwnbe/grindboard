@@ -15,57 +15,57 @@ from app.config import get_settings
 
 
 class DatabaseSessionManager:
-    """Create and manage shared async SQLAlchemy engine and session factories."""
+    """Manages async SQLAlchemy engine and sessions with proper lifecycle control."""
 
-    def __init__(self, host: str, engine_kwargs: Mapping[str, Any] | None = None):
-        self._engine: AsyncEngine | None = create_async_engine(
-            host, **(engine_kwargs) or {}
+    def __init__(self, url: str, engine_kwargs: Mapping[str, Any] | None = None):
+        """Initialize the database session manager."""
+        self._engine = create_async_engine(url, **(engine_kwargs or {}))
+        self._sessionmaker = async_sessionmaker(
+            self._engine,
+            expire_on_commit=False,
+            class_=AsyncSession,
         )
-        self._sessionmaker: async_sessionmaker[AsyncSession] | None = (
-            async_sessionmaker(
-                bind=self._engine,
-                expire_on_commit=False,
-                class_=AsyncSession,
-            )
-        )
+        self._closed = False
+
+    def _ensure_open(self) -> None:
+        """Raise RuntimeError if the manager has been closed."""
+        if self._closed:
+            raise RuntimeError("DatabaseSessionManager has been closed")
 
     @property
-    def engine(self):
-        """Return the lazily-instantiated async engine."""
+    def engine(self) -> AsyncEngine:
+        """Return the async engine instance."""
+        self._ensure_open()
         return self._engine
 
-    async def close(self):
-        """Dispose the underlying engine and clear cached factories."""
-        if self._engine is None:
-            raise Exception("DatabaseSessionManager is not initialized")
+    async def close(self) -> None:
+        """Close the engine and mark this manager as closed."""
+        if self._closed:
+            return
         await self._engine.dispose()
-
-        self._engine = None
-        self._sessionmaker = None
+        self._closed = True
 
     @contextlib.asynccontextmanager
     async def connect(self) -> AsyncIterator[AsyncConnection]:
-        """Provide a transactional connection that rolls back if an error occurs."""
-        if self._engine is None:
-            raise Exception("DatabaseSessionManager is not initialized")
+        """
+        Provide a transactional database connection.
 
+        The connection is automatically committed on success or rolled back on error.
+        """
+        self._ensure_open()
         async with self._engine.begin() as connection:
             yield connection
 
     @contextlib.asynccontextmanager
     async def session(self) -> AsyncIterator[AsyncSession]:
-        """Yield an AsyncSession that automatically rolls back on error."""
-        if self._sessionmaker is None:
-            raise Exception("DatabaseSessionManager is not initialized")
+        """
+        Provide a database session.
 
-        session = self._sessionmaker()
-        try:
+        The session is automatically closed after use and rolled back on error.
+        """
+        self._ensure_open()
+        async with self._sessionmaker() as session:
             yield session
-        except Exception:
-            await session.rollback()
-            raise
-        finally:
-            await session.close()
 
 
 sessionmanager = DatabaseSessionManager(get_settings().app.database_url)

@@ -1,5 +1,3 @@
-PORT = 8000
-
 .PHONY: help install start test clear
 
 help:  ## Show available commands
@@ -13,7 +11,7 @@ install: ## Install development dependencies
 
 start: ## Start fastapi in dev mode
 	@echo "Starting fastapi in dev mode..."
-	uv run --group dev fastapi dev --host 0.0.0.0 --port $(PORT)
+	uv run --group dev fastapi dev --host 0.0.0.0 --port 3000
 
 test: ## Run test suite
 	@echo "Testing application..."

@@ -1,6 +1,5 @@
 from contextlib import asynccontextmanager
 
-import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -32,7 +31,3 @@ app.add_middleware(
 )
 app.include_router(users_router)
 app.include_router(tasks_router)
-
-
-if __name__ == "__main__":
-    uvicorn.run("app.main:app", host=settings.server.host, port=settings.server.port)

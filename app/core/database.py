@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from alembic import command, config
 from app.config import get_settings
 
 
@@ -74,3 +75,15 @@ async def get_database_session():
     """FastAPI dependency that yields a managed AsyncSession."""
     async with sessionmanager.session() as session:
         yield session
+
+
+def _run_upgrade(connection, cfg):
+    cfg.attributes["connection"] = connection
+    command.upgrade(cfg, "head")
+
+
+async def run_async_upgrade() -> None:
+    cfg = config.Config("alembic.ini")
+
+    async with sessionmanager.connect() as connection:
+        await connection.run_sync(_run_upgrade, cfg)

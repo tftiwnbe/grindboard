@@ -1,105 +1,166 @@
+"""Test configuration with in-memory database and transaction rollback."""
+
 import asyncio
-from collections.abc import AsyncGenerator, Generator
-from pathlib import Path
-from typing import Any
+from typing import AsyncGenerator
 
 import pytest
-from alembic.config import Config
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-from sqlalchemy.engine import Connection
+import pytest_asyncio
+from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import (
-    AsyncEngine,
     AsyncSession,
+    AsyncEngine,
     async_sessionmaker,
     create_async_engine,
 )
 
 from alembic import command
+from alembic.config import Config
 from app.core.database import get_database_session
-from app.main import app as actual_app
+from app.main import app
 
 
-@pytest.fixture(autouse=True)
-def app() -> Generator[FastAPI, None, None]:
-    yield actual_app
-
-
-@pytest.fixture
-def client(app: FastAPI):
-    with TestClient(app) as c:
-        yield c
-
-
-def login(
-    client: TestClient, username: str = "alice", password: str = "secret123"
-) -> tuple[int, dict[str, Any]]:
-    r = client.post("/auth/login", json={"username": username, "password": password})
-    content_type = r.headers.get("content-type") or ""
-    body = r.json() if content_type.startswith("application/json") else {}
-    return r.status_code, body
-
-
-@pytest.fixture
-def auth_headers(client: TestClient) -> dict[str, str]:
-    status, body = login(client)
-    assert status == 200
-    token = body.get("token") or ""
-    return {"Authorization": f"Bearer {token}"}
+# ============================================================================
+# Event Loop Setup
+# ============================================================================
 
 
 @pytest.fixture(scope="session")
 def event_loop():
-    loop = asyncio.get_event_loop_policy().new_event_loop()
+    """Create event loop for async tests."""
+    loop = asyncio.new_event_loop()
     yield loop
     loop.close()
 
 
-def run_migrations(connection: Connection):
-    config = Config("alembic.ini")
-    config.set_main_option("script_location", "alembic")
-    config.attributes["connection"] = connection
-    command.upgrade(config, "head")
+# ============================================================================
+# Database Setup - One migration run, transaction rollback per test
+# ============================================================================
 
 
-@pytest.fixture(scope="function")
-async def test_engine(
-    tmp_path_factory: pytest.TempPathFactory,
-) -> AsyncGenerator[AsyncEngine, None]:
-    db_dir: Path = tmp_path_factory.mktemp("dbs")
-    db_path = db_dir / "test.db"
-    db_url = f"sqlite+aiosqlite:///{db_path}"
-
-    engine = create_async_engine(db_url)
-    async with engine.begin() as conn:
-        await conn.run_sync(run_migrations)
-    try:
-        yield engine
-    finally:
-        await engine.dispose()
-
-
-@pytest.fixture(scope="function")
-async def db_session(
-    test_engine: AsyncEngine,
-) -> AsyncGenerator[AsyncSession, None]:
-    session_factory = async_sessionmaker(
-        bind=test_engine, expire_on_commit=False, class_=AsyncSession
+@pytest_asyncio.fixture(scope="session")
+async def engine() -> AsyncGenerator[AsyncEngine, None]:
+    """
+    Create in-memory SQLite database and run migrations once.
+    This is shared across all tests in the session.
+    """
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        echo=False,
+        future=True,
     )
-    session: AsyncSession = session_factory()
-    try:
-        yield session
-    finally:
-        await session.close()
+
+    # Run migrations once for the entire test session
+    async with engine.begin() as conn:
+        await conn.run_sync(_run_migrations)
+
+    yield engine
+
+    await engine.dispose()
 
 
-@pytest.fixture(scope="function", autouse=True)
-async def session_override(
-    app: FastAPI, db_session: AsyncSession
-) -> AsyncGenerator[None, None]:
-    async def get_db_session_override():
-        yield db_session
+def _run_migrations(connection):
+    """Run alembic migrations synchronously."""
+    cfg = Config("alembic.ini")
+    cfg.attributes["connection"] = connection
+    command.upgrade(cfg, "head")
 
-    app.dependency_overrides[get_database_session] = get_db_session_override
-    yield
+
+@pytest_asyncio.fixture
+async def db(engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
+    """
+    Provide a database session with automatic rollback.
+    Each test gets a fresh transaction that is rolled back after the test.
+    """
+    # Create a new connection for this test
+    async with engine.connect() as connection:
+        # Start a transaction
+        async with connection.begin() as transaction:
+            # Create session bound to this transaction
+            session_maker = async_sessionmaker(
+                bind=connection,
+                class_=AsyncSession,
+                expire_on_commit=False,
+            )
+
+            async with session_maker() as session:
+                yield session
+
+            # Transaction automatically rolls back here
+            await transaction.rollback()
+
+
+# ============================================================================
+# HTTP Client Setup
+# ============================================================================
+
+
+@pytest_asyncio.fixture
+async def client(db: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+    """
+    Provide async HTTP client with database dependency override.
+    Uses HTTPX AsyncClient for true async support.
+    """
+
+    async def override_get_db():
+        yield db
+
+    app.dependency_overrides[get_database_session] = override_get_db
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        yield client
+
     app.dependency_overrides.clear()
+
+
+# ============================================================================
+# Authentication Helpers
+# ============================================================================
+
+
+@pytest.fixture
+def make_user(client: AsyncClient):
+    """Helper to create and login a user."""
+
+    async def _make_user(username: str = "testuser", password: str = "password123"):
+        response = await client.post(
+            "/auth/login", json={"username": username, "password": password}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        return data["token"]
+
+    return _make_user
+
+
+@pytest_asyncio.fixture
+async def auth_token(make_user) -> str:
+    """Provide authentication token for default test user."""
+    return await make_user()
+
+
+@pytest.fixture
+def auth_headers(auth_token: str) -> dict[str, str]:
+    """Provide authentication headers."""
+    return {"Authorization": f"Bearer {auth_token}"}
+
+
+# ============================================================================
+# Task Helpers
+# ============================================================================
+
+
+@pytest.fixture
+def make_task(client: AsyncClient, auth_headers: dict[str, str]):
+    """Helper to create tasks in tests."""
+
+    async def _make_task(
+        title: str = "Test Task", description: str = "Test Description", **kwargs
+    ):
+        payload = {"title": title, "description": description, **kwargs}
+        response = await client.post("/tasks/", json=payload, headers=auth_headers)
+        assert response.status_code == 200
+        return response.json()
+
+    return _make_task

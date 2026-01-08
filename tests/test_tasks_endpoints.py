@@ -1,79 +1,171 @@
-from typing import Any, cast
-
-from fastapi.testclient import TestClient
-
-from app.models import Task
+import pytest
+from httpx import AsyncClient
 
 
-def _create_task(client: TestClient, headers: dict[str, str], **overrides: object) -> Task:
-    payload: dict[str, Any] = {
-        "title": "write tests",
-        "description": "cover CRUD",
-    } | overrides
-    r = client.post("/tasks/", json=payload, headers=headers)
-    assert r.status_code == 200
-    return Task.model_validate(r.json())
+class TestListTasks:
+    """Tests for GET /tasks/ endpoint."""
+
+    async def test_empty_list(self, client: AsyncClient, auth_headers: dict[str, str]):
+        """New user should have empty task list."""
+        response = await client.get("/tasks/", headers=auth_headers)
+
+        assert response.status_code == 200
+        assert response.json() == []
+
+    async def test_lists_created_tasks(
+        self, client: AsyncClient, auth_headers: dict[str, str], make_task
+    ):
+        """Should list all tasks created by user."""
+        # Create multiple tasks
+        task1 = await make_task(title="Task 1")
+        task2 = await make_task(title="Task 2")
+
+        response = await client.get("/tasks/", headers=auth_headers)
+
+        assert response.status_code == 200
+        tasks = response.json()
+        assert len(tasks) == 2
+        assert any(t["id"] == task1["id"] for t in tasks)
+        assert any(t["id"] == task2["id"] for t in tasks)
 
 
-def test_list_empty(client: TestClient, auth_headers: dict[str, str]):
-    r = client.get("/tasks/", headers=auth_headers)
-    assert r.status_code == 200
-    assert r.json() == []
+class TestCreateTask:
+    """Tests for POST /tasks/ endpoint."""
+
+    async def test_creates_task_with_all_fields(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ):
+        """Should create task and return it with ID."""
+        response = await client.post(
+            "/tasks/",
+            json={"title": "Write tests", "description": "Cover all endpoints"},
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        task = response.json()
+        assert task["id"] is not None
+        assert task["title"] == "Write tests"
+        assert task["description"] == "Cover all endpoints"
+        assert task["completed"] is False
+
+    async def test_validates_required_fields(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ):
+        """Should reject task without title."""
+        response = await client.post(
+            "/tasks/", json={"description": "No title provided"}, headers=auth_headers
+        )
+
+        assert response.status_code == 422
 
 
-def test_create_returns_task(client: TestClient, auth_headers: dict[str, str]):
-    data = _create_task(client, auth_headers, title="t1", description="d1")
-    assert data.id is not None
-    assert data.title == "t1"
-    assert data.description == "d1"
-    assert data.completed is False
+class TestUpdateTask:
+    """Tests for PUT /tasks/{id} endpoint."""
+
+    async def test_updates_task_fields(
+        self, client: AsyncClient, auth_headers: dict[str, str], make_task
+    ):
+        """Should update task and return only changed fields."""
+        task = await make_task(title="Old Title", description="Old Description")
+
+        response = await client.put(
+            f"/tasks/{task['id']}", json={"title": "New Title"}, headers=auth_headers
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["title"] == "New Title"
+        # Should only return updated fields
+        assert "id" not in data
+        assert "completed" not in data
+
+    async def test_update_nonexistent_task(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ):
+        """Should return 404 for nonexistent task."""
+        response = await client.put(
+            "/tasks/999999", json={"title": "New Title"}, headers=auth_headers
+        )
+
+        assert response.status_code == 404
 
 
-def test_update_returns_update_fields_only(client: TestClient, auth_headers: dict[str, str]):
-    created = _create_task(client, auth_headers, title="old")
-    r = client.put(f"/tasks/{created.id}", json={"title": "new"}, headers=auth_headers)
-    assert r.status_code == 200
-    body = cast(dict[str, Any], r.json())
-    assert body["title"] == "new"
-    assert "completed" not in body and "id" not in body
+class TestCompleteTask:
+    """Tests for POST /tasks/{id}/complete endpoint."""
+
+    async def test_toggles_completion_status(
+        self, client: AsyncClient, auth_headers: dict[str, str], make_task
+    ):
+        """Should toggle task completion status."""
+        task = await make_task(title="Toggle Task")
+        task_id = task["id"]
+
+        # Mark as completed
+        r1 = await client.post(f"/tasks/{task_id}/complete", headers=auth_headers)
+        assert r1.status_code == 200
+        assert r1.json()["completed"] is True
+
+        # Toggle back to incomplete
+        r2 = await client.post(f"/tasks/{task_id}/complete", headers=auth_headers)
+        assert r2.status_code == 200
+        assert r2.json()["completed"] is False
+
+    async def test_complete_nonexistent_task(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ):
+        """Should return 404 for nonexistent task."""
+        response = await client.post("/tasks/999999/complete", headers=auth_headers)
+        assert response.status_code == 404
 
 
-def test_complete_toggles(client: TestClient, auth_headers: dict[str, str]):
-    created = _create_task(client, auth_headers, title="toggle")
-    tid = created.id
-    r1 = client.post(f"/tasks/{tid}/complete", headers=auth_headers)
-    assert r1.status_code == 200 and r1.json()["completed"] is True
-    r2 = client.post(f"/tasks/{tid}/complete", headers=auth_headers)
-    assert r2.status_code == 200 and r2.json()["completed"] is False
+class TestDeleteTask:
+    """Tests for DELETE /tasks/{id} endpoint."""
+
+    async def test_deletes_task(
+        self, client: AsyncClient, auth_headers: dict[str, str], make_task
+    ):
+        """Should delete task and remove from list."""
+        task = await make_task(title="Delete Me")
+        task_id = task["id"]
+
+        # Delete task
+        response = await client.delete(f"/tasks/{task_id}", headers=auth_headers)
+        assert response.status_code == 200
+
+        # Verify it's not in the list
+        list_response = await client.get("/tasks/", headers=auth_headers)
+        tasks = list_response.json()
+        assert not any(t["id"] == task_id for t in tasks)
+
+    async def test_delete_nonexistent_task(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ):
+        """Should return 404 for nonexistent task."""
+        response = await client.delete("/tasks/999999", headers=auth_headers)
+        assert response.status_code == 404
 
 
-def test_delete_removes_from_list(client: TestClient, auth_headers: dict[str, str]):
-    created = _create_task(client, auth_headers, title="to delete")
-    tid = created.id
-    del_r = client.delete(f"/tasks/{tid}", headers=auth_headers)
-    assert del_r.status_code == 200
-    lst_json = cast(list[Task], client.get("/tasks/", headers=auth_headers).json())
-    lst = [Task.model_validate(item) for item in lst_json]
-    assert all(item.id != tid for item in lst)
+class TestAuthentication:
+    """Tests for authentication requirements."""
 
+    @pytest.mark.parametrize(
+        "method,endpoint",
+        [
+            ("get", "/tasks/"),
+            ("post", "/tasks/"),
+            ("put", "/tasks/1"),
+            ("post", "/tasks/1/complete"),
+            ("delete", "/tasks/1"),
+        ],
+    )
+    async def test_requires_authentication(
+        self, client: AsyncClient, method: str, endpoint: str
+    ):
+        """All task endpoints should require authentication."""
+        kwargs = {}
+        if method in ("post", "put"):
+            kwargs["json"] = {"title": "Test"}
 
-def test_validation_error_on_create(client: TestClient, auth_headers: dict[str, str]):
-    r = client.post("/tasks/", json={"description": "missing title"}, headers=auth_headers)
-    assert r.status_code == 422
-
-
-def test_update_not_found(client: TestClient, auth_headers: dict[str, str]):
-    r = client.put("/tasks/999999", json={"title": "x"}, headers=auth_headers)
-    assert r.status_code == 404
-    r = client.post("/tasks/999999/complete", headers=auth_headers)
-    assert r.status_code == 404
-
-
-def test_delete_not_found(client: TestClient, auth_headers: dict[str, str]):
-    r = client.delete("/tasks/999999", headers=auth_headers)
-    assert r.status_code == 404
-
-
-def test_requires_auth(client: TestClient):
-    r = client.get("/tasks/")
-    assert r.status_code == 401
+        response = await getattr(client, method)(endpoint, **kwargs)
+        assert response.status_code == 401

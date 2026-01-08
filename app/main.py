@@ -5,13 +5,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.core.database import sessionmanager
+from app.core.database import sessionmanager, run_async_upgrade
 from app.tasks.router import router as tasks_router
 from app.users.router import router as users_router
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    await run_async_upgrade()
     yield
     if sessionmanager.engine is not None:
         await sessionmanager.close()

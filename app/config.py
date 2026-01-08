@@ -49,18 +49,6 @@ class AppConfig(GrindboardBaseSettings):
         return f"sqlite+aiosqlite:///{self.config_dir}/grindboard.db"
 
 
-class ServerConfig(GrindboardBaseSettings):
-    host: str = "127.0.0.1"
-    port: int = 8000
-
-    @field_validator("port")
-    @classmethod
-    def validate_port(cls, v: int) -> int:
-        if not 1 <= v <= 65535:
-            raise ValueError("Port must be between 1 and 65535")
-        return v
-
-
 class AuthConfig(GrindboardBaseSettings):
     token_ttl_minutes: int = 60 * 24  # 24h by default
     jwt_secret_key: str = ""
@@ -76,7 +64,6 @@ class AuthConfig(GrindboardBaseSettings):
 
 class Settings(GrindboardBaseSettings):
     app: AppConfig = Field(default_factory=AppConfig)
-    server: ServerConfig = Field(default_factory=ServerConfig)
     auth: AuthConfig = Field(default_factory=AuthConfig)
 
     @classmethod

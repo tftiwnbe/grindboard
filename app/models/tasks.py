@@ -1,9 +1,9 @@
-from typing import Any, ClassVar, TYPE_CHECKING
+from typing import Any, ClassVar
 
 from sqlmodel import Field, Relationship, SQLModel
 
-if TYPE_CHECKING:
-    from app.models.users import User
+from app.models.tags import Tag, TaskTagLink
+from app.models.users import User
 
 
 class Task(SQLModel, table=True):
@@ -15,6 +15,7 @@ class Task(SQLModel, table=True):
     position: float = Field(default=0.0, index=True)
     completed: bool = Field(default=False)
 
+    tags: list["Tag"] = Relationship(back_populates="tasks", link_model=TaskTagLink)
     user_id: int = Field(foreign_key="users.id", index=True, ondelete="CASCADE")
     user: "User" = Relationship(back_populates="tasks")
 

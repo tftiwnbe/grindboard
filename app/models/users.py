@@ -5,6 +5,7 @@ from pydantic import field_validator
 
 if TYPE_CHECKING:
     from app.models.tasks import Task
+    from app.models.tags import Tag
 
 
 class User(SQLModel, table=True):
@@ -15,6 +16,7 @@ class User(SQLModel, table=True):
     password_hash: str = Field(max_length=256)
 
     tasks: list["Task"] = Relationship(back_populates="user", cascade_delete=True)
+    tags: list["Tag"] = Relationship(back_populates="user", cascade_delete=True)
 
 
 class UserCreate(SQLModel):

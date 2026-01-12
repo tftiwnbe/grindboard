@@ -13,6 +13,7 @@ async def get_service(db: DBSessionDep) -> UserService:
 
 @router.post("/login", response_model=TokenOut)
 async def login(payload: UserLogin, service: UserService = Depends(get_service)):
+    """Authenticate a user and return an access token."""
     user = await service.register_or_authenticate(
         username=payload.username, password=payload.password
     )

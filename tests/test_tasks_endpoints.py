@@ -146,6 +146,72 @@ class TestDeleteTask:
         assert response.status_code == 404
 
 
+class TestMoveTask:
+    """Tests for POST /tasks/{task_id}/move endpoint."""
+
+    async def test_move_task_to_top(
+        self, client: AsyncClient, auth_headers: dict[str, str], make_task
+    ):
+        """Move a task to the top of the list."""
+        # Create 3 tasks
+        t1 = await make_task(title="Task 1")
+        t2 = await make_task(title="Task 2")
+        t3 = await make_task(title="Task 3")
+
+        # Move Task 3 to top (after_id=None)
+        response = await client.post(f"/tasks/{t3['id']}/move", headers=auth_headers)
+        assert response.status_code == 200
+        moved_task = response.json()
+        assert moved_task["id"] == t3["id"]
+
+        # Verify order: Task 3 should be first
+        list_response = await client.get("/tasks/", headers=auth_headers)
+        tasks = list_response.json()
+        assert tasks[0]["id"] == t3["id"]
+        # Remaining tasks follow in original order
+        remaining_ids = [t["id"] for t in tasks[1:]]
+        assert remaining_ids == [t1["id"], t2["id"]]
+
+    async def test_move_task_after_another(
+        self, client: AsyncClient, auth_headers: dict[str, str], make_task
+    ):
+        """Move a task after another task."""
+        t1 = await make_task(title="Task 1")
+        t2 = await make_task(title="Task 2")
+        t3 = await make_task(title="Task 3")
+
+        # Move Task 3 after Task 1
+        response = await client.post(
+            f"/tasks/{t3['id']}/move?after_id={t1['id']}", headers=auth_headers
+        )
+        assert response.status_code == 200
+        moved_task = response.json()
+        assert moved_task["id"] == t3["id"]
+
+        # Verify order: Task 1, Task 3, Task 2
+        list_response = await client.get("/tasks/", headers=auth_headers)
+        tasks = list_response.json()
+        expected_order = [t1["id"], t3["id"], t2["id"]]
+        assert [t["id"] for t in tasks] == expected_order
+
+    async def test_move_nonexistent_task(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ):
+        """Should return 404 if task does not exist."""
+        response = await client.post("/tasks/999999/move", headers=auth_headers)
+        assert response.status_code == 404
+
+    async def test_move_after_nonexistent_task(
+        self, client: AsyncClient, auth_headers: dict[str, str], make_task
+    ):
+        """Should return 404 if after_id does not exist."""
+        t1 = await make_task(title="Task 1")
+        response = await client.post(
+            f"/tasks/{t1['id']}/move?after_id=999999", headers=auth_headers
+        )
+        assert response.status_code == 404
+
+
 class TestAuthentication:
     """Tests for authentication requirements."""
 

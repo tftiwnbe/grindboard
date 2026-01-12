@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.dependencies import DBSessionDep
-from app.models import Task, TaskCreate, TaskUpdate
 from app.core.security import CurrentUserDep
+from app.models import Task, TaskCreate, TaskUpdate
 from app.tasks.service import TaskService
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
@@ -61,6 +61,19 @@ async def delete_task(
     service: TaskService = Depends(get_service),
 ):
     task = await service.delete(task_id, current_user)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task
+
+
+@router.post("/{task_id}/move", response_model=Task)
+async def move_task(
+    task_id: int,
+    current_user: CurrentUserDep,
+    service: TaskService = Depends(get_service),
+    after_id: int | None = None,
+):
+    task = await service.move_task(task_id, current_user, after_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     return task

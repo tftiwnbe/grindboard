@@ -8,11 +8,11 @@ class TagService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def list(self, user: User):
+    async def list(self, user: User) -> list[Tag]:
         """Get all tags for a user."""
         stmt = select(Tag).where(Tag.user_id == user.id)
         tags = await self.session.scalars(stmt)
-        return tags.all()
+        return list(tags.all())
 
     async def create(self, user: User, name: str) -> Tag:
         """Create a new tag for a user."""

@@ -7,6 +7,7 @@ from app.config import get_settings
 from app.core.database import sessionmanager, run_async_upgrade
 from app.tasks.router import router as tasks_router
 from app.users.router import router as users_router
+from app.tags.router import router as tags_router
 
 
 @asynccontextmanager
@@ -31,3 +32,4 @@ app.add_middleware(
 )
 app.include_router(users_router)
 app.include_router(tasks_router)
+app.include_router(tags_router)

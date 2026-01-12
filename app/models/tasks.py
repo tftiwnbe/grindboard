@@ -12,6 +12,7 @@ class Task(SQLModel, table=True):
     id: int = Field(primary_key=True)
     title: str = Field(index=True)
     description: str = Field(default="")
+    position: float = Field(default=0.0, index=True)
     completed: bool = Field(default=False)
 
     user_id: int = Field(foreign_key="users.id", index=True, ondelete="CASCADE")

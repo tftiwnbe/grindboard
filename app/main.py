@@ -19,8 +19,6 @@ async def lifespan(_app: FastAPI):
 
 
 settings = get_settings()
-if not settings.app.config_path.exists():
-    settings.save_settings()
 
 app = FastAPI(lifespan=lifespan, title=settings.app.project_name)
 app.add_middleware(

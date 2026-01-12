@@ -8,10 +8,10 @@ class TaskService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def list(self, user: User):
+    async def list(self, user: User) -> list[Task]:
         stmt = select(Task).where(Task.user_id == user.id).order_by(asc(Task.position))
         tasks = await self.session.scalars(stmt)
-        return tasks.all()
+        return list(tasks.all())
 
     async def create(self, user: User, task_data: TaskCreate) -> Task:
         payload = task_data.model_dump(exclude_unset=True)

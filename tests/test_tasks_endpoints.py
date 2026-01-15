@@ -3,11 +3,11 @@ from httpx import AsyncClient
 
 
 class TestListTasks:
-    """Tests for GET /tasks/ endpoint."""
+    """Tests for GET /api/v1/tasks/ endpoint."""
 
     async def test_empty_list(self, client: AsyncClient, auth_headers: dict[str, str]):
         """New user should have empty task list."""
-        response = await client.get("/tasks/", headers=auth_headers)
+        response = await client.get("/api/v1/tasks/", headers=auth_headers)
 
         assert response.status_code == 200
         assert response.json() == []
@@ -20,7 +20,7 @@ class TestListTasks:
         task1 = await make_task(title="Task 1")
         task2 = await make_task(title="Task 2")
 
-        response = await client.get("/tasks/", headers=auth_headers)
+        response = await client.get("/api/v1/tasks/", headers=auth_headers)
 
         assert response.status_code == 200
         tasks = response.json()
@@ -30,14 +30,14 @@ class TestListTasks:
 
 
 class TestCreateTask:
-    """Tests for POST /tasks/ endpoint."""
+    """Tests for POST /api/v1/tasks/ endpoint."""
 
     async def test_creates_task_with_all_fields(
         self, client: AsyncClient, auth_headers: dict[str, str]
     ):
         """Should create task and return it with ID."""
         response = await client.post(
-            "/tasks/",
+            "/api/v1/tasks/",
             json={"title": "Write tests", "description": "Cover all endpoints"},
             headers=auth_headers,
         )
@@ -54,14 +54,16 @@ class TestCreateTask:
     ):
         """Should reject task without title."""
         response = await client.post(
-            "/tasks/", json={"description": "No title provided"}, headers=auth_headers
+            "/api/v1/tasks/",
+            json={"description": "No title provided"},
+            headers=auth_headers,
         )
 
         assert response.status_code == 422
 
 
 class TestUpdateTask:
-    """Tests for PUT /tasks/{id} endpoint."""
+    """Tests for PUT /api/v1/tasks/{id} endpoint."""
 
     async def test_updates_task_fields(
         self, client: AsyncClient, auth_headers: dict[str, str], make_task
@@ -70,7 +72,9 @@ class TestUpdateTask:
         task = await make_task(title="Old Title", description="Old Description")
 
         response = await client.put(
-            f"/tasks/{task['id']}", json={"title": "New Title"}, headers=auth_headers
+            f"/api/v1/tasks/{task['id']}",
+            json={"title": "New Title"},
+            headers=auth_headers,
         )
 
         assert response.status_code == 200
@@ -85,7 +89,7 @@ class TestUpdateTask:
     ):
         """Should return 404 for nonexistent task."""
         response = await client.put(
-            "/tasks/999999", json={"title": "New Title"}, headers=auth_headers
+            "/api/v1/tasks/999999", json={"title": "New Title"}, headers=auth_headers
         )
 
         assert response.status_code == 404
@@ -102,12 +106,16 @@ class TestCompleteTask:
         task_id = task["id"]
 
         # Mark as completed
-        r1 = await client.post(f"/tasks/{task_id}/complete", headers=auth_headers)
+        r1 = await client.post(
+            f"/api/v1/tasks/{task_id}/complete", headers=auth_headers
+        )
         assert r1.status_code == 200
         assert r1.json()["completed"] is True
 
         # Toggle back to incomplete
-        r2 = await client.post(f"/tasks/{task_id}/complete", headers=auth_headers)
+        r2 = await client.post(
+            f"/api/v1/tasks/{task_id}/complete", headers=auth_headers
+        )
         assert r2.status_code == 200
         assert r2.json()["completed"] is False
 
@@ -115,7 +123,9 @@ class TestCompleteTask:
         self, client: AsyncClient, auth_headers: dict[str, str]
     ):
         """Should return 404 for nonexistent task."""
-        response = await client.post("/tasks/999999/complete", headers=auth_headers)
+        response = await client.post(
+            "/api/v1/tasks/999999/complete", headers=auth_headers
+        )
         assert response.status_code == 404
 
 
@@ -130,11 +140,11 @@ class TestDeleteTask:
         task_id = task["id"]
 
         # Delete task
-        response = await client.delete(f"/tasks/{task_id}", headers=auth_headers)
+        response = await client.delete(f"/api/v1/tasks/{task_id}", headers=auth_headers)
         assert response.status_code == 200
 
         # Verify it's not in the list
-        list_response = await client.get("/tasks/", headers=auth_headers)
+        list_response = await client.get("/api/v1/tasks/", headers=auth_headers)
         tasks = list_response.json()
         assert not any(t["id"] == task_id for t in tasks)
 
@@ -142,12 +152,12 @@ class TestDeleteTask:
         self, client: AsyncClient, auth_headers: dict[str, str]
     ):
         """Should return 404 for nonexistent task."""
-        response = await client.delete("/tasks/999999", headers=auth_headers)
+        response = await client.delete("/api/v1/tasks/999999", headers=auth_headers)
         assert response.status_code == 404
 
 
 class TestMoveTask:
-    """Tests for POST /tasks/{task_id}/move endpoint."""
+    """Tests for POST /api/v1/tasks/{task_id}/move endpoint."""
 
     async def test_move_task_to_top(
         self, client: AsyncClient, auth_headers: dict[str, str], make_task
@@ -159,13 +169,15 @@ class TestMoveTask:
         t3 = await make_task(title="Task 3")
 
         # Move Task 3 to top (after_id=None)
-        response = await client.post(f"/tasks/{t3['id']}/move", headers=auth_headers)
+        response = await client.post(
+            f"/api/v1/tasks/{t3['id']}/move", headers=auth_headers
+        )
         assert response.status_code == 200
         moved_task = response.json()
         assert moved_task["id"] == t3["id"]
 
         # Verify order: Task 3 should be first
-        list_response = await client.get("/tasks/", headers=auth_headers)
+        list_response = await client.get("/api/v1/tasks/", headers=auth_headers)
         tasks = list_response.json()
         assert tasks[0]["id"] == t3["id"]
         # Remaining tasks follow in original order
@@ -182,14 +194,14 @@ class TestMoveTask:
 
         # Move Task 3 after Task 1
         response = await client.post(
-            f"/tasks/{t3['id']}/move?after_id={t1['id']}", headers=auth_headers
+            f"/api/v1/tasks/{t3['id']}/move?after_id={t1['id']}", headers=auth_headers
         )
         assert response.status_code == 200
         moved_task = response.json()
         assert moved_task["id"] == t3["id"]
 
         # Verify order: Task 1, Task 3, Task 2
-        list_response = await client.get("/tasks/", headers=auth_headers)
+        list_response = await client.get("/api/v1/tasks/", headers=auth_headers)
         tasks = list_response.json()
         expected_order = [t1["id"], t3["id"], t2["id"]]
         assert [t["id"] for t in tasks] == expected_order
@@ -198,7 +210,7 @@ class TestMoveTask:
         self, client: AsyncClient, auth_headers: dict[str, str]
     ):
         """Should return 404 if task does not exist."""
-        response = await client.post("/tasks/999999/move", headers=auth_headers)
+        response = await client.post("/api/v1/tasks/999999/move", headers=auth_headers)
         assert response.status_code == 404
 
     async def test_move_after_nonexistent_task(
@@ -207,7 +219,7 @@ class TestMoveTask:
         """Should return 404 if after_id does not exist."""
         t1 = await make_task(title="Task 1")
         response = await client.post(
-            f"/tasks/{t1['id']}/move?after_id=999999", headers=auth_headers
+            f"/api/v1/tasks/{t1['id']}/move?after_id=999999", headers=auth_headers
         )
         assert response.status_code == 404
 
@@ -218,11 +230,11 @@ class TestAuthentication:
     @pytest.mark.parametrize(
         "method,endpoint",
         [
-            ("get", "/tasks/"),
-            ("post", "/tasks/"),
-            ("put", "/tasks/1"),
-            ("post", "/tasks/1/complete"),
-            ("delete", "/tasks/1"),
+            ("get", "/api/v1/tasks/"),
+            ("post", "/api/v1/tasks/"),
+            ("put", "/api/v1/tasks/1"),
+            ("post", "/api/v1/tasks/1/complete"),
+            ("delete", "/api/v1/tasks/1"),
         ],
     )
     async def test_requires_authentication(

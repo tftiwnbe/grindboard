@@ -125,7 +125,7 @@ def make_user(client: AsyncClient):
 
     async def _make_user(username: str = "testuser", password: str = "password123"):
         response = await client.post(
-            "/auth/login", json={"username": username, "password": password}
+            "/api/v1/auth/login", json={"username": username, "password": password}
         )
         assert response.status_code == 200
         data = response.json()
@@ -159,7 +159,9 @@ def make_task(client: AsyncClient, auth_headers: dict[str, str]):
         title: str = "Test Task", description: str = "Test Description", **kwargs
     ):
         payload = {"title": title, "description": description, **kwargs}
-        response = await client.post("/tasks/", json=payload, headers=auth_headers)
+        response = await client.post(
+            "/api/v1/tasks/", json=payload, headers=auth_headers
+        )
         assert response.status_code == 200
         return response.json()
 

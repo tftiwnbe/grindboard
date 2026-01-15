@@ -28,6 +28,6 @@ app.add_middleware(
     allow_headers=settings.app.cors_allow_headers,
     allow_credentials=settings.app.cors_allow_credentials,
 )
-app.include_router(users_router)
-app.include_router(tasks_router)
-app.include_router(tags_router)
+app.include_router(users_router, prefix="/api/v1")
+app.include_router(tasks_router, prefix="/api/v1")
+app.include_router(tags_router, prefix="/api/v1")

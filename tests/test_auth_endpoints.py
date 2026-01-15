@@ -8,7 +8,7 @@ class TestLogin:
     async def test_creates_user_and_returns_token(self, client: AsyncClient):
         """First login should create user and return valid token."""
         response = await client.post(
-            "/auth/login", json={"username": "alice", "password": "secret123"}
+            "/api/v1/auth/login", json={"username": "alice", "password": "secret123"}
         )
 
         assert response.status_code == 200
@@ -22,12 +22,12 @@ class TestLogin:
         credentials = {"username": "bob", "password": "password123"}
 
         # First login
-        r1 = await client.post("/auth/login", json=credentials)
+        r1 = await client.post("/api/v1/auth/login", json=credentials)
         assert r1.status_code == 200
         token1 = r1.json()["token"]
 
         # Second login
-        r2 = await client.post("/auth/login", json=credentials)
+        r2 = await client.post("/api/v1/auth/login", json=credentials)
         assert r2.status_code == 200
         token2 = r2.json()["token"]
 
@@ -39,13 +39,14 @@ class TestLogin:
         """Whitespace around username should be trimmed."""
         # Login with whitespace
         r1 = await client.post(
-            "/auth/login", json={"username": "  charlie  ", "password": "pass123"}
+            "/api/v1/auth/login",
+            json={"username": "  charlie  ", "password": "pass123"},
         )
         assert r1.status_code == 200
 
         # Login without whitespace should work (same user)
         r2 = await client.post(
-            "/auth/login", json={"username": "charlie", "password": "pass123"}
+            "/api/v1/auth/login", json={"username": "charlie", "password": "pass123"}
         )
         assert r2.status_code == 200
 
@@ -69,6 +70,6 @@ class TestLoginValidation:
     ):
         """Login should reject invalid inputs."""
         response = await client.post(
-            "/auth/login", json={"username": username, "password": password}
+            "/api/v1/auth/login", json={"username": username, "password": password}
         )
         assert response.status_code == 422, f"Expected 422 for: {reason}"

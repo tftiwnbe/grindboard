@@ -22,13 +22,13 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 WORKDIR /app
 
 # Cache deps
-COPY pyproject.toml uv.lock ./
+COPY server/pyproject.toml server/uv.lock ./
 RUN uv sync --frozen --no-dev
 
 # Copy source
-COPY app ./app
-COPY alembic ./alembic
-COPY alembic.ini ./
+COPY server/app ./app
+COPY server/alembic ./alembic
+COPY server/alembic.ini ./
 
 EXPOSE 3000
 

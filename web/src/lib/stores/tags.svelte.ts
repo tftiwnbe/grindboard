@@ -1,7 +1,7 @@
 import type { components } from "$lib/api/v1";
 import client from "$lib/api/client";
 
-type Tag = components["schemas"]["Tag"];
+type Tag = components["schemas"]["TagRead"];
 
 interface TagsState {
   tags: Tag[];

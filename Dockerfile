@@ -1,35 +1,62 @@
-FROM python:3.13-slim AS base
+# Stage 1: Build frontend
+FROM node:20-alpine AS frontend-build
+WORKDIR /app/web
+RUN corepack enable
+COPY web/pnpm-lock.yaml web/package.json ./
+COPY web/pnpm-workspace.yaml ./pnpm-workspace.yaml
+RUN pnpm install --frozen-lockfile
+COPY web/ .
+RUN pnpm build
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-  PYTHONUNBUFFERED=1 \
-  UV_LINK_MODE=copy \
-  PATH="/root/.local/bin:${PATH}"
+# Stage 2: Python dependencies
+FROM python:3.13-slim AS python-deps
+WORKDIR /app
 
-# Fail-safe shell with pipefail
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# Use Debian snapshot to freeze repo versions
-RUN echo "deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20241104T000000Z trixie main" > /etc/apt/sources.list \
-  && apt-get update -y \
-  && apt-get install -y --no-install-recommends \
-  ca-certificates \
-  curl \
-  && rm -rf /var/lib/apt/lists/*
+# Copy dependency files
+COPY server/pyproject.toml ./
 
-# Install uv
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+# Install dependencies
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -e .
+
+# Stage 3: Production runtime
+FROM python:3.13-slim AS production
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Cache deps
-COPY server/pyproject.toml server/uv.lock ./
-RUN uv sync --frozen --no-dev
+# Copy Python packages from deps stage
+COPY --from=python-deps /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=python-deps /usr/local/bin /usr/local/bin
 
-# Copy source
+# Copy application code
 COPY server/app ./app
 COPY server/alembic ./alembic
 COPY server/alembic.ini ./
 
+# Copy frontend build
+COPY --from=frontend-build /app/web/build ./app/static
+
+# Create data directory
+RUN mkdir -p /app/data
+
+# Environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONFAULTHANDLER=1 \
+    GRINDBOARD__SERVER__HOST=0.0.0.0
+
 EXPOSE 3000
 
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "3000"]
+VOLUME ["/app/data"]
+
+CMD ["python", "-m", "app.main"]

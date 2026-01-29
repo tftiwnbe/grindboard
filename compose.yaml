@@ -1,0 +1,11 @@
+services:
+  grindboard:
+    build: .
+    container_name: grindboard
+    ports:
+      - 3000:3000
+    volumes:
+      - ./data:/app/data
+    environment:
+      - GRINDBOARD__AUTH__JWT_SECRET_KEY=change_this
+    restart: unless-stopped

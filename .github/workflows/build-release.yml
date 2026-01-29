@@ -3,6 +3,7 @@ name: Build & Release
 permissions:
   contents: write
   packages: write
+  security-events: write
 
 on:
   push:
@@ -91,6 +92,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -99,7 +103,7 @@ jobs:
           output: "trivy-results.sarif"
 
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: "trivy-results.sarif"
         if: always()

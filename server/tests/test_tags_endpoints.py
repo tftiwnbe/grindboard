@@ -294,65 +294,6 @@ class TestRemoveTagFromTask:
         assert response.status_code == 200
 
 
-class TestCreateAndAddTag:
-    """Tests for POST /api/v1/tags/tasks/{task_id}/tags endpoint."""
-
-    async def test_creates_and_adds_new_tag(
-        self, client: AsyncClient, auth_headers: dict[str, str], make_task
-    ):
-        """Should create new tag and add it to task."""
-        task = await make_task(title="Test Task")
-
-        response = await client.post(
-            f"/api/v1/tags/tasks/{task['id']}/tags?name=new_tag", headers=auth_headers
-        )
-
-        assert response.status_code == 200
-        tag = response.json()
-        assert tag["name"] == "new_tag"
-        assert tag["id"] is not None
-
-        # Verify tag was created
-        list_response = await client.get("/api/v1/tags/", headers=auth_headers)
-        tags = list_response.json()
-        assert any(t["name"] == "new_tag" for t in tags)
-
-    async def test_uses_existing_tag(
-        self, client: AsyncClient, auth_headers: dict[str, str], make_task
-    ):
-        """Should use existing tag if name already exists."""
-        # Create tag first
-        tag_response = await client.post(
-            "/api/v1/tags/?name=existing", headers=auth_headers
-        )
-        existing_tag_id = tag_response.json()["id"]
-
-        task = await make_task(title="Test Task")
-
-        # Create and add with same name
-        response = await client.post(
-            f"/api/v1/tags/tasks/{task['id']}/tags?name=existing", headers=auth_headers
-        )
-
-        assert response.status_code == 200
-        tag = response.json()
-        assert tag["id"] == existing_tag_id
-
-        # Verify only one tag exists
-        list_response = await client.get("/api/v1/tags/", headers=auth_headers)
-        tags = list_response.json()
-        assert len(tags) == 1
-
-    async def test_create_and_add_to_nonexistent_task(
-        self, client: AsyncClient, auth_headers: dict[str, str]
-    ):
-        """Should return 404 for nonexistent task."""
-        response = await client.post(
-            "/api/v1/tags/tasks/999999/tags?name=test", headers=auth_headers
-        )
-        assert response.status_code == 404
-
-
 class TestAuthentication:
     """Tests for authentication requirements."""
 
@@ -365,7 +306,6 @@ class TestAuthentication:
             ("delete", "/api/v1/tags/1"),
             ("post", "/api/v1/tags/tasks/1/tags/1"),
             ("delete", "/api/v1/tags/tasks/1/tags/1"),
-            ("post", "/api/v1/tags/tasks/1/tags?name=test"),
         ],
     )
     async def test_requires_authentication(

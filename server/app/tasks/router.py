@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.dependencies import DBSessionDep
 from app.core.security import CurrentUserDep
-from app.models import Task, TaskCreate, TaskUpdate
+from app.models import TaskCreate, TaskRead, TaskUpdate
 from app.tasks.service import TaskService
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
@@ -12,7 +12,7 @@ async def get_service(db: DBSessionDep) -> TaskService:
     return TaskService(db)
 
 
-@router.get("/", response_model=list[Task])
+@router.get("/", response_model=list[TaskRead])
 async def list_tasks(
     current_user: CurrentUserDep,
     service: TaskService = Depends(get_service),
@@ -21,7 +21,7 @@ async def list_tasks(
     return await service.list(current_user)
 
 
-@router.post("/", response_model=Task)
+@router.post("/", response_model=TaskRead)
 async def create_task(
     task_data: TaskCreate,
     current_user: CurrentUserDep,
@@ -31,7 +31,7 @@ async def create_task(
     return await service.create(current_user, task_data)
 
 
-@router.put("/{task_id}", response_model=TaskUpdate)
+@router.put("/{task_id}", response_model=TaskRead)
 async def update_task(
     task_id: int,
     task_data: TaskUpdate,
@@ -45,7 +45,7 @@ async def update_task(
     return task
 
 
-@router.post("/{task_id}/complete", response_model=Task)
+@router.post("/{task_id}/complete", response_model=TaskRead)
 async def toggle_task(
     task_id: int,
     current_user: CurrentUserDep,
@@ -58,7 +58,7 @@ async def toggle_task(
     return task
 
 
-@router.delete("/{task_id}", response_model=Task)
+@router.delete("/{task_id}", response_model=TaskRead)
 async def delete_task(
     task_id: int,
     current_user: CurrentUserDep,
@@ -71,7 +71,7 @@ async def delete_task(
     return task
 
 
-@router.post("/{task_id}/move", response_model=Task)
+@router.post("/{task_id}/move", response_model=TaskRead)
 async def move_task(
     task_id: int,
     current_user: CurrentUserDep,

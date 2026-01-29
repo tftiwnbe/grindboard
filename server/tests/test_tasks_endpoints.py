@@ -68,7 +68,7 @@ class TestUpdateTask:
     async def test_updates_task_fields(
         self, client: AsyncClient, auth_headers: dict[str, str], make_task
     ):
-        """Should update task and return only changed fields."""
+        """Should update task and return full updated task."""
         task = await make_task(title="Old Title", description="Old Description")
 
         response = await client.put(
@@ -79,10 +79,12 @@ class TestUpdateTask:
 
         assert response.status_code == 200
         data = response.json()
+        # Should return full TaskRead object
         assert data["title"] == "New Title"
-        # Should only return updated fields
-        assert "id" not in data
-        assert "completed" not in data
+        assert data["id"] == task["id"]
+        assert data["description"] == "Old Description"  # Unchanged
+        assert data["completed"] is False
+        assert "tags" in data  # TaskRead includes tags
 
     async def test_update_nonexistent_task(
         self, client: AsyncClient, auth_headers: dict[str, str]

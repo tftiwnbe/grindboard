@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.dependencies import DBSessionDep
 from app.core.security import CurrentUserDep
-from app.models import Tag
+from app.models import TagRead
 from app.tags.service import TagService
 
 router = APIRouter(prefix="/tags", tags=["Tags"])
@@ -12,7 +12,7 @@ async def get_service(db: DBSessionDep) -> TagService:
     return TagService(db)
 
 
-@router.get("/", response_model=list[Tag])
+@router.get("/", response_model=list[TagRead])
 async def list_tags(
     current_user: CurrentUserDep,
     service: TagService = Depends(get_service),
@@ -21,7 +21,7 @@ async def list_tags(
     return await service.list(current_user)
 
 
-@router.post("/", response_model=Tag)
+@router.post("/", response_model=TagRead)
 async def create_tag(
     name: str,
     current_user: CurrentUserDep,
@@ -31,7 +31,7 @@ async def create_tag(
     return await service.create(current_user, name)
 
 
-@router.put("/{tag_id}", response_model=Tag)
+@router.put("/{tag_id}", response_model=TagRead)
 async def rename_tag(
     tag_id: int,
     name: str,
@@ -58,7 +58,7 @@ async def delete_tag(
     return {"message": "Tag deleted successfully"}
 
 
-@router.post("/tasks/{task_id}/tags/{tag_id}", response_model=Tag)
+@router.post("/tasks/{task_id}/tags/{tag_id}", response_model=TagRead)
 async def add_tag_to_task(
     task_id: int,
     tag_id: int,
@@ -84,17 +84,3 @@ async def remove_tag_from_task(
     if not success:
         raise HTTPException(status_code=404, detail="Task or tag not found")
     return {"message": "Tag removed from task"}
-
-
-@router.post("/tasks/{task_id}/tags", response_model=Tag)
-async def create_and_add_tag(
-    task_id: int,
-    name: str,
-    current_user: CurrentUserDep,
-    service: TagService = Depends(get_service),
-):
-    """Create a new tag and immediately add it to a task."""
-    tag = await service.create_and_add_to_task(task_id, current_user, name)
-    if not tag:
-        raise HTTPException(status_code=404, detail="Task not found")
-    return tag

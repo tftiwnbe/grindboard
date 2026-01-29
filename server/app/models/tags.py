@@ -23,3 +23,8 @@ class Tag(SQLModel, table=True):
 
     tasks: list["Task"] = Relationship(back_populates="tags", link_model=TaskTagLink)
     user: "User" = Relationship(back_populates="tags")
+
+
+class TagRead(SQLModel):
+    id: int
+    name: str

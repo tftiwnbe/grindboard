@@ -27,6 +27,19 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
 # Stage 3: Production runtime
 FROM python:3.13-slim AS production
 
+# Build arguments for metadata
+ARG VERSION=dev
+ARG BUILD_DATE
+ARG VCS_REF
+
+# OCI Labels
+LABEL org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.title="Grindboard" \
+      org.opencontainers.image.description="A minimal FastAPI backend for tasks management" \
+      org.opencontainers.image.licenses="AGPL-3.0"
+
 # Install runtime dependencies only
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \

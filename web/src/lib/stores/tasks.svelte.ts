@@ -5,12 +5,21 @@ type Task = components["schemas"]["TaskRead"];
 type TaskCreate = components["schemas"]["TaskCreate"];
 type TaskUpdate = components["schemas"]["TaskUpdate"];
 
+export type SortOption =
+  | "manual"
+  | "date-desc"
+  | "date-asc"
+  | "alpha-asc"
+  | "alpha-desc";
+
 interface TasksState {
   tasks: Task[];
   isLoading: boolean;
   error: string | null;
   draggedTaskId: number | null;
   dragOverTaskId: number | null;
+  showCompleted: boolean;
+  sortBy: SortOption;
 }
 
 class TasksStore {
@@ -20,6 +29,8 @@ class TasksStore {
     error: null,
     draggedTaskId: null,
     dragOverTaskId: null,
+    showCompleted: false,
+    sortBy: "manual",
   });
 
   // Getters
@@ -41,6 +52,14 @@ class TasksStore {
 
   get dragOverTaskId() {
     return this.state.dragOverTaskId;
+  }
+
+  get showCompleted() {
+    return this.state.showCompleted;
+  }
+
+  get sortBy() {
+    return this.state.sortBy;
   }
 
   // Fetch all tasks (tags are included in the response)
@@ -161,18 +180,39 @@ class TasksStore {
   async toggleTask(taskId: number) {
     this.state.error = null;
 
+    // Optimistically update the UI
+    const taskIndex = this.state.tasks.findIndex((t) => t.id === taskId);
+    if (taskIndex !== -1) {
+      this.state.tasks[taskIndex] = {
+        ...this.state.tasks[taskIndex],
+        completed: !this.state.tasks[taskIndex].completed,
+      };
+    }
+
     try {
       const { error } = await client.POST("/api/v1/tasks/{task_id}/complete", {
         params: { path: { task_id: taskId } },
       });
 
       if (error) {
+        // Revert on error
+        if (taskIndex !== -1) {
+          this.state.tasks[taskIndex] = {
+            ...this.state.tasks[taskIndex],
+            completed: !this.state.tasks[taskIndex].completed,
+          };
+        }
         this.state.error = "Failed to toggle task";
         return;
       }
-
-      await this.fetchTasks();
     } catch (err) {
+      // Revert on error
+      if (taskIndex !== -1) {
+        this.state.tasks[taskIndex] = {
+          ...this.state.tasks[taskIndex],
+          completed: !this.state.tasks[taskIndex].completed,
+        };
+      }
       this.state.error = "Failed to toggle task";
       console.error("Toggle task error:", err);
     }
@@ -245,6 +285,46 @@ class TasksStore {
   // Clear error
   clearError() {
     this.state.error = null;
+  }
+
+  // Toggle showing completed tasks
+  toggleShowCompleted() {
+    this.state.showCompleted = !this.state.showCompleted;
+  }
+
+  // Set sort option
+  setSortBy(sortBy: SortOption) {
+    this.state.sortBy = sortBy;
+  }
+
+  // Get sorted and filtered tasks
+  getSortedTasks(): Task[] {
+    let result = [...this.state.tasks];
+
+    // Filter by completion status
+    if (this.state.showCompleted) {
+      // Show only completed tasks
+      result = result.filter((task) => task.completed);
+    } else {
+      // Show only uncompleted tasks
+      result = result.filter((task) => !task.completed);
+    }
+
+    // Sort tasks
+    switch (this.state.sortBy) {
+      case "alpha-asc":
+        result.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case "alpha-desc":
+        result.sort((a, b) => b.title.localeCompare(a.title));
+        break;
+      case "manual":
+      default:
+        // Keep original order (already sorted by position from API)
+        break;
+    }
+
+    return result;
   }
 }
 

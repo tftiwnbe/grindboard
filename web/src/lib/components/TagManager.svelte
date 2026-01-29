@@ -74,7 +74,7 @@
 
       {#if tags.length === 0}
         <p class="text-center text-muted-foreground py-8 text-sm">
-          No tags yet. Create one above!
+          No tags here. Don’t leave your tasks lonely.
         </p>
       {:else}
         <div class="space-y-2 max-h-[50vh] overflow-y-auto">

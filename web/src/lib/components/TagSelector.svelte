@@ -63,7 +63,7 @@
         {/each}
       {:else}
         <p class="text-xs text-muted-foreground">
-          No tags yet. Create one below.
+          Shh… the emptiness is listening.
         </p>
       {/if}
     </div>

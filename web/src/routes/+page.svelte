@@ -8,8 +8,15 @@
   import { ScrollArea } from "$lib/elements/scroll-area/index.js";
   import { authStore } from "$lib/stores/auth.svelte";
   import { tagsStore } from "$lib/stores/tags.svelte";
+  import type { SortOption } from "$lib/stores/tasks.svelte";
   import { tasksStore } from "$lib/stores/tasks.svelte";
-  import { initializeTheme, toggleTheme, type Theme } from "$lib/utils/theme";
+  import {
+    getEffectiveTheme,
+    initializeTheme,
+    setupThemeListener,
+    toggleTheme,
+    type Theme,
+  } from "$lib/utils/theme";
   import {
     LogOutIcon,
     MoonIcon,
@@ -23,7 +30,7 @@
   type Tag = components["schemas"]["TagRead"];
 
   // UI State
-  let theme = $state<Theme>("dark");
+  let themeOverride = $state<Theme | null>(null);
   let showTaskDialog = $state(false);
   let showTagManager = $state(false);
   let dialogMode = $state<"create" | "edit">("create");
@@ -36,7 +43,7 @@
 
   // Derived filtered tasks
   const filteredTasks = $derived(() => {
-    let result = tasksStore.tasks;
+    let result = tasksStore.getSortedTasks();
 
     // Search filter
     if (searchQuery.trim()) {
@@ -60,15 +67,28 @@
     return result;
   });
 
-  onMount(async () => {
-    theme = initializeTheme();
+  // Count of uncompleted tasks
+  const uncompletedCount = $derived(
+    tasksStore.tasks.filter((t) => !t.completed).length,
+  );
+
+  onMount(() => {
+    themeOverride = initializeTheme();
+
+    // Setup listener for system theme changes
+    const cleanup = setupThemeListener(() => {
+      // Force re-render when system theme changes (only matters if override is null)
+      themeOverride = themeOverride;
+    });
 
     // Load initial data
-    await Promise.all([tasksStore.fetchTasks(), tagsStore.fetchTags()]);
+    Promise.all([tasksStore.fetchTasks(), tagsStore.fetchTags()]);
+
+    return cleanup;
   });
 
   function handleToggleTheme() {
-    theme = toggleTheme(theme);
+    themeOverride = toggleTheme();
   }
 
   function handleCreateTask() {
@@ -163,6 +183,14 @@
     selectedFilterTags = [];
   }
 
+  function handleToggleCompleted() {
+    tasksStore.toggleShowCompleted();
+  }
+
+  function handleSortChange(sort: SortOption) {
+    tasksStore.setSortBy(sort);
+  }
+
   function handleLogout() {
     authStore.logout();
   }
@@ -177,8 +205,8 @@
         <h1 class="text-2xl font-bold">Grindboard</h1>
         {#if authStore.username}
           <p class="text-sm text-muted-foreground">
-            {authStore.username} · {tasksStore.tasks.length}
-            {tasksStore.tasks.length === 1 ? "task" : "tasks"}
+            {authStore.username} · {uncompletedCount}
+            {uncompletedCount === 1 ? "task" : "tasks"}
           </p>
         {/if}
       </div>
@@ -192,7 +220,7 @@
           <TagIcon class="size-5" />
         </Button>
         <Button size="icon" variant="ghost" onclick={handleToggleTheme}>
-          {#if theme === "dark"}
+          {#if getEffectiveTheme() === "dark"}
             <SunIcon class="size-5" />
           {:else}
             <MoonIcon class="size-5" />
@@ -219,8 +247,12 @@
           bind:searchQuery
           {selectedFilterTags}
           allTags={tagsStore.tags}
+          showCompleted={tasksStore.showCompleted}
+          sortBy={tasksStore.sortBy}
           onToggleTag={handleToggleFilterTag}
           onClear={handleClearFilters}
+          onToggleCompleted={handleToggleCompleted}
+          onSortChange={handleSortChange}
         />
       </div>
 
@@ -231,9 +263,9 @@
       {:else if filteredTasks().length === 0}
         <div class="text-center py-12 text-muted-foreground">
           {#if searchQuery || selectedFilterTags.length > 0}
-            No tasks match your filters
+            Filters too strong, or you just picky?
           {:else}
-            No tasks yet. Create one to get started!
+            Nothing to see here… yet
           {/if}
         </div>
       {:else}

@@ -5,22 +5,32 @@
   import { Input } from "$lib/elements/input/index.js";
   import { Label } from "$lib/elements/label/index.js";
   import { authStore } from "$lib/stores/auth.svelte";
-  import { initializeTheme, toggleTheme, type Theme } from "$lib/utils/theme";
+  import {
+    getEffectiveTheme,
+    initializeTheme,
+    setupThemeListener,
+    toggleTheme,
+    type Theme,
+  } from "$lib/utils/theme";
   import { MoonIcon, SunIcon } from "@lucide/svelte/icons";
   import { onMount } from "svelte";
 
   let username = $state("");
   let password = $state("");
-  let theme = $state<Theme>("dark");
+  let themeOverride = $state<Theme | null>(null);
 
   onMount(() => {
-    // Redirect if already logged in
+    themeOverride = initializeTheme();
+
+    const cleanup = setupThemeListener(() => {
+      themeOverride = themeOverride;
+    });
+
     if (authStore.isAuthenticated) {
       goto("/");
     }
 
-    // Initialize theme
-    theme = initializeTheme();
+    return cleanup;
   });
 
   async function handleLogin(e: SubmitEvent) {
@@ -32,14 +42,14 @@
   }
 
   function handleToggleTheme() {
-    theme = toggleTheme(theme);
+    themeOverride = toggleTheme();
   }
 </script>
 
 <div class="flex items-center justify-center min-h-screen bg-background px-4">
   <div class="fixed absolute top-4 right-4 pt-[env(safe-area-inset-top)]">
     <Button size="icon" variant="ghost" onclick={handleToggleTheme}>
-      {#if theme === "dark"}
+      {#if getEffectiveTheme() === "dark"}
         <SunIcon class="size-5" />
       {:else}
         <MoonIcon class="size-5" />

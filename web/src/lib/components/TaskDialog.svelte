@@ -97,6 +97,7 @@
           id="task-title"
           bind:value={title}
           placeholder="Task title"
+          autofocus={dialogMode === "create"}
           required
         />
       </div>

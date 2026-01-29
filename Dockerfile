@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy dependency files
 COPY server/pyproject.toml ./
+COPY server/app ./app
 
 # Install dependencies
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \

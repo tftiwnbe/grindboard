@@ -2,7 +2,6 @@
 name = "grindboard"
 version = "2.0.0"
 description = "A minimal FastAPI backend for tasks management"
-readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "aiosqlite>=0.21.0",
@@ -25,3 +24,10 @@ dev = [
 [build-system]
 requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["app"]
+package-dir = {"" = "."}
+
+[tool.setuptools.package-data]
+app = ["py.typed"]

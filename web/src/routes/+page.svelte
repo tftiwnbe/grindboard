@@ -5,6 +5,7 @@
   import TaskDialog from "$lib/components/TaskDialog.svelte";
   import TaskItem from "$lib/components/TaskItem.svelte";
   import { Button } from "$lib/elements/button/index.js";
+  import { ScrollArea } from "$lib/elements/scroll-area/index.js";
   import { authStore } from "$lib/stores/auth.svelte";
   import { tagsStore } from "$lib/stores/tags.svelte";
   import { tasksStore } from "$lib/stores/tasks.svelte";
@@ -169,7 +170,7 @@
 
 <div class="min-h-screen bg-background">
   <header
-    class="fixed top-0 left-0 w-full border-b bg-card pt-[env(safe-area-inset-top)]"
+    class="fixed top-0 left-0 w-full border-b bg-card pt-[env(safe-area-inset-top)] z-10"
   >
     <div class="container mx-auto px-4 py-2 flex items-center justify-between">
       <div>
@@ -204,61 +205,63 @@
     </div>
   </header>
 
-  <main
-    class="container mx-auto px-4 pt-[calc(5rem+env(safe-area-inset-top))] max-w-3xl"
+  <ScrollArea
+    class="h-screen pt-[calc(4.2rem+env(safe-area-inset-top))] pb-[env(safe-area-inset-bottom)]"
   >
-    <Button onclick={handleCreateTask} class="w-full">
-      <PlusIcon class="size-4 mr-2" />
-      Add Task
-    </Button>
+    <div class="container mx-auto px-4 max-w-3xl pt-4 pb-8">
+      <Button onclick={handleCreateTask} class="w-full">
+        <PlusIcon class="size-4 mr-2" />
+        Add Task
+      </Button>
 
-    <div class="my-4">
-      <FilterBar
-        bind:searchQuery
-        {selectedFilterTags}
-        allTags={tagsStore.tags}
-        onToggleTag={handleToggleFilterTag}
-        onClear={handleClearFilters}
-      />
+      <div class="my-4">
+        <FilterBar
+          bind:searchQuery
+          {selectedFilterTags}
+          allTags={tagsStore.tags}
+          onToggleTag={handleToggleFilterTag}
+          onClear={handleClearFilters}
+        />
+      </div>
+
+      {#if tasksStore.isLoading}
+        <div class="text-center py-12 text-muted-foreground">
+          Loading tasks...
+        </div>
+      {:else if filteredTasks().length === 0}
+        <div class="text-center py-12 text-muted-foreground">
+          {#if searchQuery || selectedFilterTags.length > 0}
+            No tasks match your filters
+          {:else}
+            No tasks yet. Create one to get started!
+          {/if}
+        </div>
+      {:else}
+        <div class="space-y-3" role="list">
+          {#each filteredTasks() as task (task.id)}
+            <TaskItem
+              {task}
+              tags={task.tags}
+              onToggle={handleToggleTask}
+              onEdit={handleEditTask}
+              onDelete={handleDeleteTask}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDragEnd={handleDragEnd}
+              isDragging={tasksStore.draggedTaskId === task.id}
+              isDragOver={tasksStore.dragOverTaskId === task.id}
+            />
+          {/each}
+        </div>
+      {/if}
+
+      {#if tasksStore.error}
+        <div class="mt-4 p-4 bg-destructive/10 text-destructive rounded-lg">
+          {tasksStore.error}
+        </div>
+      {/if}
     </div>
-
-    {#if tasksStore.isLoading}
-      <div class="text-center py-12 text-muted-foreground">
-        Loading tasks...
-      </div>
-    {:else if filteredTasks().length === 0}
-      <div class="text-center py-12 text-muted-foreground">
-        {#if searchQuery || selectedFilterTags.length > 0}
-          No tasks match your filters
-        {:else}
-          No tasks yet. Create one to get started!
-        {/if}
-      </div>
-    {:else}
-      <div class="space-y-3" role="list">
-        {#each filteredTasks() as task (task.id)}
-          <TaskItem
-            {task}
-            tags={task.tags}
-            onToggle={handleToggleTask}
-            onEdit={handleEditTask}
-            onDelete={handleDeleteTask}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDragEnd={handleDragEnd}
-            isDragging={tasksStore.draggedTaskId === task.id}
-            isDragOver={tasksStore.dragOverTaskId === task.id}
-          />
-        {/each}
-      </div>
-    {/if}
-
-    {#if tasksStore.error}
-      <div class="mt-4 p-4 bg-destructive/10 text-destructive rounded-lg">
-        {tasksStore.error}
-      </div>
-    {/if}
-  </main>
+  </ScrollArea>
 
   <TaskDialog
     bind:open={showTaskDialog}

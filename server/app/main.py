@@ -1,3 +1,4 @@
+import uvicorn
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -8,6 +9,7 @@ from app.core.database import sessionmanager, run_async_upgrade
 from app.tasks.router import router as tasks_router
 from app.users.router import router as users_router
 from app.tags.router import router as tags_router
+from app.web.router import router as web_router
 
 
 @asynccontextmanager
@@ -31,3 +33,11 @@ app.add_middleware(
 app.include_router(users_router, prefix="/api/v1")
 app.include_router(tasks_router, prefix="/api/v1")
 app.include_router(tags_router, prefix="/api/v1")
+app.include_router(web_router)
+
+if __name__ == "__main__":
+    uvicorn.run(
+        app="app.main:app",
+        host=settings.server.host,
+        port=settings.server.port,
+    )

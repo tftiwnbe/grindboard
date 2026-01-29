@@ -12,3 +12,5 @@ wheels/
 # Project related
 .env
 *.db
+static/
+data/

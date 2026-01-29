@@ -9,6 +9,7 @@ from pydantic_settings import (
 )
 
 APP_DIR = Path(__file__).resolve().parent
+STATIC_ROOT = APP_DIR / "static"
 DATA_DIR = APP_DIR.parent / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -27,20 +28,26 @@ class GrindboardBaseSettings(BaseSettings):
 
 class AppConfig(GrindboardBaseSettings):
     project_name: str = "Grindboard"
+    static_root: Path = STATIC_ROOT
     data_dir: Path = DATA_DIR
     cors_allow_origins: list[str] = Field(
-        default_factory=lambda: ["http://localhost:8000"]
+        default_factory=lambda: [f"https://127.0.0.1:{ServerConfig().port}"]
     )
     cors_allow_origin_regex: str | None = None
     cors_allow_credentials: bool = True
     cors_allow_methods: list[str] = Field(
-        default_factory=lambda: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+        default_factory=lambda: ["GET", "POST", "PUT", "DELETE"]
     )
     cors_allow_headers: list[str] = Field(default_factory=lambda: ["*"])
 
     @property
     def database_url(self) -> str:
         return f"sqlite+aiosqlite:///{self.data_dir}/grindboard.db"
+
+
+class ServerConfig(GrindboardBaseSettings):
+    host: str = "127.0.0.1"
+    port: int = 3000
 
 
 class AuthConfig(GrindboardBaseSettings):
@@ -58,6 +65,7 @@ class AuthConfig(GrindboardBaseSettings):
 
 class Settings(GrindboardBaseSettings):
     app: AppConfig = Field(default_factory=AppConfig)
+    server: ServerConfig = Field(default_factory=ServerConfig)
     auth: AuthConfig = Field(default_factory=AuthConfig)
 
 

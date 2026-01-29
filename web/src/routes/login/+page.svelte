@@ -52,8 +52,8 @@
       <Card.Title>Welcome to Grindboard</Card.Title>
       <Card.Description>Sign in to manage your tasks</Card.Description>
     </Card.Header>
-    <form onsubmit={handleLogin} class="flex flex-col gap-4">
-      <Card.Content>
+    <form onsubmit={handleLogin}>
+      <Card.Content class="flex flex-col gap-4">
         <div class="flex flex-col gap-2">
           <Label for="username">Username</Label>
           <Input
@@ -78,7 +78,7 @@
           <p class="text-sm text-destructive">{authStore.error}</p>
         {/if}
       </Card.Content>
-      <Card.Footer class="flex flex-col gap-2">
+      <Card.Footer class="flex flex-col pt-6">
         <Button type="submit" class="w-full" disabled={authStore.isLoading}>
           {authStore.isLoading ? "Logging in..." : "Login"}
         </Button>

@@ -13,11 +13,13 @@
   } from "@lucide/svelte/icons";
 
   type Tag = components["schemas"]["TagRead"];
+  type Task = components["schemas"]["TaskRead"];
 
   interface Props {
     searchQuery: string;
     selectedFilterTags: number[];
     allTags: Tag[];
+    allTasks: Task[];
     showCompleted: boolean;
     sortBy: SortOption;
     onToggleTag: (tagId: number) => void;
@@ -30,6 +32,7 @@
     searchQuery = $bindable(),
     selectedFilterTags,
     allTags,
+    allTasks,
     showCompleted,
     sortBy,
     onToggleTag,
@@ -45,6 +48,25 @@
   ];
 
   let currentSortIndex = $state(0);
+
+  // Sort tags by number of tasks (descending) - based on currently visible tasks
+  const sortedTags = $derived(() => {
+    // Get the current filtered task list based on showCompleted
+    const relevantTasks = allTasks.filter((task) =>
+      showCompleted ? task.completed : !task.completed,
+    );
+
+    const tagsWithCount = allTags.map((tag) => {
+      const count = relevantTasks.filter((task) =>
+        task.tags.some((t) => t.id === tag.id),
+      ).length;
+      return { tag, count };
+    });
+
+    return tagsWithCount
+      .sort((a, b) => b.count - a.count)
+      .map((item) => item.tag);
+  });
 
   $effect(() => {
     currentSortIndex = sortOptions.findIndex((opt) => opt.value === sortBy);
@@ -99,7 +121,7 @@
 
   {#if allTags.length > 0}
     <div class="flex flex-wrap gap-1.5">
-      {#each allTags as tag}
+      {#each sortedTags() as tag}
         {@const isActive = selectedFilterTags.includes(tag.id || 0)}
         <Button
           type="button"

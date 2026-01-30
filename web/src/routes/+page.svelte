@@ -58,7 +58,7 @@
     // Tag filter
     if (selectedFilterTags.length > 0) {
       result = result.filter((task) => {
-        return selectedFilterTags.some((tagId) =>
+        return selectedFilterTags.every((tagId) =>
           task.tags.some((tag) => tag.id === tagId),
         );
       });
@@ -66,11 +66,6 @@
 
     return result;
   });
-
-  // Count of uncompleted tasks
-  const uncompletedCount = $derived(
-    tasksStore.tasks.filter((t) => !t.completed).length,
-  );
 
   onMount(() => {
     themeOverride = initializeTheme();
@@ -205,8 +200,8 @@
         <h1 class="text-2xl font-bold">Grindboard</h1>
         {#if authStore.username}
           <p class="text-sm text-muted-foreground">
-            {authStore.username} · {uncompletedCount}
-            {uncompletedCount === 1 ? "task" : "tasks"}
+            {authStore.username} · {filteredTasks().length}
+            {filteredTasks().length === 1 ? "task" : "tasks"}
           </p>
         {/if}
       </div>
@@ -247,6 +242,7 @@
           bind:searchQuery
           {selectedFilterTags}
           allTags={tagsStore.tags}
+          allTasks={tasksStore.tasks}
           showCompleted={tasksStore.showCompleted}
           sortBy={tasksStore.sortBy}
           onToggleTag={handleToggleFilterTag}

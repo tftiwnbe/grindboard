@@ -31,6 +31,7 @@
 
   // UI State
   let themeOverride = $state<Theme | null>(null);
+  let currentTheme = $state<Theme>("dark");
   let showTaskDialog = $state(false);
   let showTagManager = $state(false);
   let dialogMode = $state<"create" | "edit">("create");
@@ -69,11 +70,13 @@
 
   onMount(() => {
     themeOverride = initializeTheme();
+    currentTheme = getEffectiveTheme();
 
     // Setup listener for system theme changes
     const cleanup = setupThemeListener(() => {
       // Force re-render when system theme changes (only matters if override is null)
       themeOverride = themeOverride;
+      currentTheme = getEffectiveTheme();
     });
 
     // Load initial data
@@ -84,6 +87,7 @@
 
   function handleToggleTheme() {
     themeOverride = toggleTheme();
+    currentTheme = getEffectiveTheme();
   }
 
   function handleCreateTask() {
@@ -215,7 +219,7 @@
           <TagIcon class="size-5" />
         </Button>
         <Button size="icon" variant="ghost" onclick={handleToggleTheme}>
-          {#if getEffectiveTheme() === "dark"}
+          {#if currentTheme === "dark"}
             <SunIcon class="size-5" />
           {:else}
             <MoonIcon class="size-5" />

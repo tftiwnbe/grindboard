@@ -18,12 +18,15 @@
   let username = $state("");
   let password = $state("");
   let themeOverride = $state<Theme | null>(null);
+  let currentTheme = $state<Theme>("dark");
 
   onMount(() => {
     themeOverride = initializeTheme();
+    currentTheme = getEffectiveTheme();
 
     const cleanup = setupThemeListener(() => {
       themeOverride = themeOverride;
+      currentTheme = getEffectiveTheme();
     });
 
     if (authStore.isAuthenticated) {
@@ -43,13 +46,14 @@
 
   function handleToggleTheme() {
     themeOverride = toggleTheme();
+    currentTheme = getEffectiveTheme();
   }
 </script>
 
 <div class="flex items-center justify-center min-h-screen bg-background px-4">
   <div class="fixed absolute top-4 right-4 pt-[env(safe-area-inset-top)]">
     <Button size="icon" variant="ghost" onclick={handleToggleTheme}>
-      {#if getEffectiveTheme() === "dark"}
+      {#if currentTheme === "dark"}
         <SunIcon class="size-5" />
       {:else}
         <MoonIcon class="size-5" />

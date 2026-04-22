@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -16,10 +17,11 @@ class TaskTagLink(SQLModel, table=True):
 
 class Tag(SQLModel, table=True):
     __tablename__: ClassVar[Any] = "tags"
+    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_tags_user_name"),)
 
     id: int | None = Field(default=None, primary_key=True)
-    name: str = Field(index=True)
-    user_id: int = Field(foreign_key="users.id", index=True)
+    name: str = Field(index=True, min_length=1, max_length=50)
+    user_id: int = Field(foreign_key="users.id", index=True, ondelete="CASCADE")
 
     tasks: list["Task"] = Relationship(back_populates="tags", link_model=TaskTagLink)
     user: "User" = Relationship(back_populates="tags")

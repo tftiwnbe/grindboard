@@ -11,7 +11,6 @@ from pydantic_settings import (
 APP_DIR = Path(__file__).resolve().parent
 STATIC_ROOT = APP_DIR / "static"
 DATA_DIR = APP_DIR.parent / "data"
-DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class GrindboardBaseSettings(BaseSettings):
@@ -36,7 +35,7 @@ class AppConfig(GrindboardBaseSettings):
     cors_allow_origin_regex: str | None = None
     cors_allow_credentials: bool = True
     cors_allow_methods: list[str] = Field(
-        default_factory=lambda: ["GET", "POST", "PUT", "DELETE"]
+        default_factory=lambda: ["GET", "POST", "PUT", "PATCH", "DELETE"]
     )
     cors_allow_headers: list[str] = Field(default_factory=lambda: ["*"])
 

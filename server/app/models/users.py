@@ -19,16 +19,6 @@ class User(SQLModel, table=True):
     tags: list["Tag"] = Relationship(back_populates="user", cascade_delete=True)
 
 
-class UserCreate(SQLModel):
-    username: str
-    password: str
-
-
-class UserUpdate(SQLModel):
-    username: str | None = None
-    password: str | None = None
-
-
 class UserRead(SQLModel):
     id: int
     username: str

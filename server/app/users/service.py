@@ -14,11 +14,18 @@ class UserService:
         stmt = select(User).where(User.username == username)
         return (await self.session.scalars(stmt)).first()
 
-    async def register_or_authenticate(self, username: str, password: str) -> User:
+    async def register(self, username: str, password: str) -> User:
+        existing = await self.get_by_username(username)
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Username already taken",
+            )
+        return await self._create_user(username, password)
+
+    async def authenticate(self, username: str, password: str) -> User:
         user = await self.get_by_username(username)
-        if not user:
-            user = await self._create_user(username, password)
-        elif not verify_password(password, user.password_hash):
+        if not user or not verify_password(password, user.password_hash):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials",

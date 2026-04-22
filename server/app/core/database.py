@@ -83,7 +83,8 @@ def _run_upgrade(connection, cfg):
 
 
 async def run_async_upgrade() -> None:
-    cfg = config.Config("alembic.ini")
+    from pathlib import Path
+    cfg = config.Config(str(Path(__file__).parent.parent.parent / "alembic.ini"))
 
     async with sessionmanager.connect() as connection:
         await connection.run_sync(_run_upgrade, cfg)

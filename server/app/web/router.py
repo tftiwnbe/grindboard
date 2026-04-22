@@ -9,11 +9,13 @@ index_file = static_root / "index.html"
 
 router = APIRouter()
 
-router.mount(
-    "/_app",
-    StaticFiles(directory=static_root, check_dir=False),
-    name="web-assets",
-)
+_app_dir = static_root / "_app"
+if _app_dir.is_dir():
+    router.mount(
+        "/_app",
+        StaticFiles(directory=_app_dir),
+        name="web-assets",
+    )
 
 
 @router.get("/manifest.webmanifest", include_in_schema=False)

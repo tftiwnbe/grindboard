@@ -16,12 +16,20 @@ from sqlalchemy.ext.asyncio import (
 from alembic import command
 from alembic.config import Config
 from app.core.database import get_database_session
+from app.core.limiter import limiter
 from app.main import app
 
 
 # ============================================================================
 # Event Loop Setup
 # ============================================================================
+
+
+@pytest.fixture(autouse=True)
+def disable_rate_limiter():
+    limiter.enabled = False
+    yield
+    limiter.enabled = True
 
 
 @pytest.fixture(scope="session")
@@ -60,7 +68,8 @@ async def engine() -> AsyncGenerator[AsyncEngine, None]:
 
 def _run_migrations(connection):
     """Run alembic migrations synchronously."""
-    cfg = Config("alembic.ini")
+    from pathlib import Path
+    cfg = Config(str(Path(__file__).parent.parent / "alembic.ini"))
     cfg.attributes["connection"] = connection
     command.upgrade(cfg, "head")
 
@@ -125,9 +134,9 @@ def make_user(client: AsyncClient):
 
     async def _make_user(username: str = "testuser", password: str = "password123"):
         response = await client.post(
-            "/api/v1/auth/login", json={"username": username, "password": password}
+            "/api/v1/auth/register", json={"username": username, "password": password}
         )
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         return data["token"]
 

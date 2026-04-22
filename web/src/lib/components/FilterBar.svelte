@@ -122,13 +122,13 @@
   {#if allTags.length > 0}
     <div class="flex flex-wrap gap-1.5">
       {#each sortedTags() as tag}
-        {@const isActive = selectedFilterTags.includes(tag.id || 0)}
+        {@const isActive = tag.id !== null && selectedFilterTags.includes(tag.id)}
         <Button
           type="button"
           variant={isActive ? "default" : "outline"}
           size="sm"
           class="h-7 text-xs"
-          onclick={() => onToggleTag(tag.id || 0)}
+          onclick={() => { if (tag.id !== null) onToggleTag(tag.id); }}
         >
           {tag.name}
         </Button>

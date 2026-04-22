@@ -17,6 +17,7 @@
 
   let username = $state("");
   let password = $state("");
+  let mode = $state<"login" | "register">("login");
   let themeOverride = $state<Theme | null>(null);
   let currentTheme = $state<Theme>("dark");
 
@@ -36,12 +37,21 @@
     return cleanup;
   });
 
-  async function handleLogin(e: SubmitEvent) {
+  async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
-    const success = await authStore.login(username, password);
+    authStore.clearError();
+    const success =
+      mode === "login"
+        ? await authStore.login(username, password)
+        : await authStore.register(username, password);
     if (success) {
       goto("/");
     }
+  }
+
+  function switchMode() {
+    mode = mode === "login" ? "register" : "login";
+    authStore.clearError();
   }
 
   function handleToggleTheme() {
@@ -64,9 +74,11 @@
   <Card.Root class="fixed w-full max-w-sm">
     <Card.Header>
       <Card.Title>Welcome to Grindboard</Card.Title>
-      <Card.Description>Sign in to manage your tasks</Card.Description>
+      <Card.Description>
+        {mode === "login" ? "Sign in to manage your tasks" : "Create a new account"}
+      </Card.Description>
     </Card.Header>
-    <form onsubmit={handleLogin}>
+    <form onsubmit={handleSubmit}>
       <Card.Content class="flex flex-col gap-4">
         <div class="flex flex-col gap-2">
           <Label for="username">Username</Label>
@@ -92,9 +104,14 @@
           <p class="text-sm text-destructive">{authStore.error}</p>
         {/if}
       </Card.Content>
-      <Card.Footer class="flex flex-col pt-6">
+      <Card.Footer class="flex flex-col gap-2 pt-6">
         <Button type="submit" class="w-full" disabled={authStore.isLoading}>
-          {authStore.isLoading ? "Logging in..." : "Login"}
+          {authStore.isLoading
+            ? mode === "login" ? "Logging in..." : "Creating account..."
+            : mode === "login" ? "Login" : "Create account"}
+        </Button>
+        <Button type="button" variant="ghost" class="w-full text-sm" onclick={switchMode}>
+          {mode === "login" ? "Don't have an account? Register" : "Already have an account? Login"}
         </Button>
       </Card.Footer>
     </form>

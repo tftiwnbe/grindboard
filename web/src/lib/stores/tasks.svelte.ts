@@ -5,12 +5,7 @@ type Task = components["schemas"]["TaskRead"];
 type TaskCreate = components["schemas"]["TaskCreate"];
 type TaskUpdate = components["schemas"]["TaskUpdate"];
 
-export type SortOption =
-  | "manual"
-  | "date-desc"
-  | "date-asc"
-  | "alpha-asc"
-  | "alpha-desc";
+export type SortOption = "manual" | "alpha-asc" | "alpha-desc";
 
 interface TasksState {
   tasks: Task[];
@@ -33,7 +28,6 @@ class TasksStore {
     sortBy: "manual",
   });
 
-  // Getters
   get tasks() {
     return this.state.tasks;
   }
@@ -62,7 +56,6 @@ class TasksStore {
     return this.state.sortBy;
   }
 
-  // Fetch all tasks (tags are included in the response)
   async fetchTasks() {
     this.state.isLoading = true;
     this.state.error = null;
@@ -84,7 +77,6 @@ class TasksStore {
     }
   }
 
-  // Create a new task with tags
   async createTask(
     taskData: TaskCreate,
     tagIds: number[] = [],
@@ -101,18 +93,16 @@ class TasksStore {
         return false;
       }
 
-      // Add tags if any
       if (tagIds.length > 0) {
         await Promise.all(
           tagIds.map((tagId) =>
-            client.POST("/api/v1/tags/tasks/{task_id}/tags/{tag_id}", {
+            client.POST("/api/v1/tasks/{task_id}/tags/{tag_id}", {
               params: { path: { task_id: data.id, tag_id: tagId } },
             }),
           ),
         );
       }
 
-      // Refresh tasks to get updated tag data
       await this.fetchTasks();
       return true;
     } catch (err) {
@@ -122,7 +112,6 @@ class TasksStore {
     }
   }
 
-  // Update an existing task with tags
   async updateTask(
     taskId: number,
     updates: TaskUpdate,
@@ -131,7 +120,6 @@ class TasksStore {
     this.state.error = null;
 
     try {
-      // Update task details
       const { error } = await client.PUT("/api/v1/tasks/{task_id}", {
         params: { path: { task_id: taskId } },
         body: updates,
@@ -142,31 +130,27 @@ class TasksStore {
         return false;
       }
 
-      // Find current task to get its tags
       const currentTask = this.state.tasks.find((t) => t.id === taskId);
-      const currentTagIds = currentTask?.tags.map((t) => t.id) || [];
+      const currentTagIds = currentTask?.tags.map((t) => t.id) ?? [];
 
-      // Remove tags that are no longer selected
       const tagsToRemove = currentTagIds.filter((id) => !tagIds.includes(id));
       await Promise.all(
         tagsToRemove.map((tagId) =>
-          client.DELETE("/api/v1/tags/tasks/{task_id}/tags/{tag_id}", {
+          client.DELETE("/api/v1/tasks/{task_id}/tags/{tag_id}", {
             params: { path: { task_id: taskId, tag_id: tagId } },
           }),
         ),
       );
 
-      // Add new tags
       const tagsToAdd = tagIds.filter((id) => !currentTagIds.includes(id));
       await Promise.all(
         tagsToAdd.map((tagId) =>
-          client.POST("/api/v1/tags/tasks/{task_id}/tags/{tag_id}", {
+          client.POST("/api/v1/tasks/{task_id}/tags/{tag_id}", {
             params: { path: { task_id: taskId, tag_id: tagId } },
           }),
         ),
       );
 
-      // Refresh tasks to get updated tag data
       await this.fetchTasks();
       return true;
     } catch (err) {
@@ -176,11 +160,9 @@ class TasksStore {
     }
   }
 
-  // Toggle task completion status
   async toggleTask(taskId: number) {
     this.state.error = null;
 
-    // Optimistically update the UI
     const taskIndex = this.state.tasks.findIndex((t) => t.id === taskId);
     if (taskIndex !== -1) {
       this.state.tasks[taskIndex] = {
@@ -190,12 +172,11 @@ class TasksStore {
     }
 
     try {
-      const { error } = await client.POST("/api/v1/tasks/{task_id}/complete", {
+      const { error } = await client.PATCH("/api/v1/tasks/{task_id}/complete", {
         params: { path: { task_id: taskId } },
       });
 
       if (error) {
-        // Revert on error
         if (taskIndex !== -1) {
           this.state.tasks[taskIndex] = {
             ...this.state.tasks[taskIndex],
@@ -206,7 +187,6 @@ class TasksStore {
         return;
       }
     } catch (err) {
-      // Revert on error
       if (taskIndex !== -1) {
         this.state.tasks[taskIndex] = {
           ...this.state.tasks[taskIndex],
@@ -218,7 +198,6 @@ class TasksStore {
     }
   }
 
-  // Delete a task
   async deleteTask(taskId: number): Promise<boolean> {
     this.state.error = null;
 
@@ -241,7 +220,6 @@ class TasksStore {
     }
   }
 
-  // Move a task to a new position
   async moveTask(taskId: number, afterTaskId: number | null) {
     this.state.error = null;
 
@@ -265,7 +243,6 @@ class TasksStore {
     }
   }
 
-  // Drag and drop handlers
   setDraggedTask(taskId: number | null) {
     this.state.draggedTaskId = taskId;
   }
@@ -282,35 +259,27 @@ class TasksStore {
     this.state.dragOverTaskId = null;
   }
 
-  // Clear error
   clearError() {
     this.state.error = null;
   }
 
-  // Toggle showing completed tasks
   toggleShowCompleted() {
     this.state.showCompleted = !this.state.showCompleted;
   }
 
-  // Set sort option
   setSortBy(sortBy: SortOption) {
     this.state.sortBy = sortBy;
   }
 
-  // Get sorted and filtered tasks
   getSortedTasks(): Task[] {
     let result = [...this.state.tasks];
 
-    // Filter by completion status
     if (this.state.showCompleted) {
-      // Show only completed tasks
       result = result.filter((task) => task.completed);
     } else {
-      // Show only uncompleted tasks
       result = result.filter((task) => !task.completed);
     }
 
-    // Sort tasks
     switch (this.state.sortBy) {
       case "alpha-asc":
         result.sort((a, b) => a.title.localeCompare(b.title));
@@ -320,7 +289,6 @@ class TasksStore {
         break;
       case "manual":
       default:
-        // Keep original order (already sorted by position from API)
         break;
     }
 
@@ -328,5 +296,4 @@ class TasksStore {
   }
 }
 
-// Export singleton instance
 export const tasksStore = new TasksStore();

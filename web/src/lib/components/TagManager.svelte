@@ -36,7 +36,7 @@
   }
 
   function startEdit(tag: Tag) {
-    editingTagId = tag.id || null;
+    editingTagId = tag.id ?? null;
     editingTagName = tag.name;
   }
 
@@ -111,7 +111,7 @@
                   size="icon"
                   variant="ghost"
                   class="h-8 w-8"
-                  onclick={() => onDelete(tag.id || 0)}
+                  onclick={() => { if (tag.id !== null) onDelete(tag.id); }}
                 >
                   <TrashIcon class="size-4 text-destructive" />
                 </Button>

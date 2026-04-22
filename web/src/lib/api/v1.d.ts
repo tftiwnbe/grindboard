@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/api/v1/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register
+         * @description Register a new user and return an access token.
+         */
+        post: operations["register_api_v1_auth_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -15,9 +35,29 @@ export interface paths {
         put?: never;
         /**
          * Login
-         * @description Authenticate a user and return an access token.
+         * @description Authenticate an existing user and return an access token.
          */
         post: operations["login_api_v1_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Logout
+         * @description Invalidate the current access token.
+         */
+        post: operations["logout_api_v1_auth_logout_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -81,15 +121,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
         /**
          * Toggle Task
          * @description Toggle the completed status of a task.
          */
-        post: operations["toggle_task_api_v1_tasks__task_id__complete_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
+        patch: operations["toggle_task_api_v1_tasks__task_id__complete_patch"];
         trace?: never;
     };
     "/api/v1/tasks/{task_id}/move": {
@@ -103,12 +143,34 @@ export interface paths {
         put?: never;
         /**
          * Move Task
-         * @description Move a task to a new position:
-         *     - If after_id is None → move to top
-         *     - Otherwise → move after the task with after_id
+         * @description Move a task to a new position.
          */
         post: operations["move_task_api_v1_tasks__task_id__move_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{task_id}/tags/{tag_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Tag To Task
+         * @description Add an existing tag to a task.
+         */
+        post: operations["add_tag_to_task_api_v1_tasks__task_id__tags__tag_id__post"];
+        /**
+         * Remove Tag From Task
+         * @description Remove a tag from a task.
+         */
+        delete: operations["remove_tag_from_task_api_v1_tasks__task_id__tags__tag_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -157,30 +219,6 @@ export interface paths {
          * @description Delete a tag and remove it from all associated tasks.
          */
         delete: operations["delete_tag_api_v1_tags__tag_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/tags/tasks/{task_id}/tags/{tag_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Add Tag To Task
-         * @description Add an existing tag to a task.
-         */
-        post: operations["add_tag_to_task_api_v1_tags_tasks__task_id__tags__tag_id__post"];
-        /**
-         * Remove Tag From Task
-         * @description Remove a tag from a task.
-         */
-        delete: operations["remove_tag_from_task_api_v1_tags_tasks__task_id__tags__tag_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -264,6 +302,35 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    register_api_v1_auth_register_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserLogin"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: { [name: string]: unknown };
+                content: {
+                    "application/json": components["schemas"]["TokenOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: { [name: string]: unknown };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     login_api_v1_auth_login_post: {
         parameters: {
             query?: never;
@@ -279,21 +346,33 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
+                headers: { [name: string]: unknown };
                 content: {
                     "application/json": components["schemas"]["TokenOut"];
                 };
             };
             /** @description Validation Error */
             422: {
-                headers: {
-                    [name: string]: unknown;
-                };
+                headers: { [name: string]: unknown };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    logout_api_v1_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: { [name: string]: unknown };
+                content?: never;
             };
         };
     };
@@ -308,9 +387,7 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
+                headers: { [name: string]: unknown };
                 content: {
                     "application/json": components["schemas"]["TaskRead"][];
                 };
@@ -332,18 +409,14 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
+                headers: { [name: string]: unknown };
                 content: {
                     "application/json": components["schemas"]["TaskRead"];
                 };
             };
             /** @description Validation Error */
             422: {
-                headers: {
-                    [name: string]: unknown;
-                };
+                headers: { [name: string]: unknown };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
@@ -354,9 +427,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                task_id: number;
-            };
+            path: { task_id: number };
             cookie?: never;
         };
         requestBody: {
@@ -367,18 +438,14 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
+                headers: { [name: string]: unknown };
                 content: {
                     "application/json": components["schemas"]["TaskRead"];
                 };
             };
             /** @description Validation Error */
             422: {
-                headers: {
-                    [name: string]: unknown;
-                };
+                headers: { [name: string]: unknown };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
@@ -389,58 +456,44 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                task_id: number;
-            };
+            path: { task_id: number };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TaskRead"];
-                };
+            204: {
+                headers: { [name: string]: unknown };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
-                headers: {
-                    [name: string]: unknown;
-                };
+                headers: { [name: string]: unknown };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    toggle_task_api_v1_tasks__task_id__complete_post: {
+    toggle_task_api_v1_tasks__task_id__complete_patch: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                task_id: number;
-            };
+            path: { task_id: number };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
+                headers: { [name: string]: unknown };
                 content: {
                     "application/json": components["schemas"]["TaskRead"];
                 };
             };
             /** @description Validation Error */
             422: {
-                headers: {
-                    [name: string]: unknown;
-                };
+                headers: { [name: string]: unknown };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
@@ -453,8 +506,34 @@ export interface operations {
                 after_id?: number | null;
             };
             header?: never;
+            path: { task_id: number };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: { [name: string]: unknown };
+                content: {
+                    "application/json": components["schemas"]["TaskRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: { [name: string]: unknown };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_tag_to_task_api_v1_tasks__task_id__tags__tag_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
             path: {
                 task_id: number;
+                tag_id: number;
             };
             cookie?: never;
         };
@@ -462,18 +541,40 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
+                headers: { [name: string]: unknown };
                 content: {
-                    "application/json": components["schemas"]["TaskRead"];
+                    "application/json": components["schemas"]["TagRead"];
                 };
             };
             /** @description Validation Error */
             422: {
-                headers: {
-                    [name: string]: unknown;
+                headers: { [name: string]: unknown };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    remove_tag_from_task_api_v1_tasks__task_id__tags__tag_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: number;
+                tag_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: { [name: string]: unknown };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: { [name: string]: unknown };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
@@ -491,9 +592,7 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
+                headers: { [name: string]: unknown };
                 content: {
                     "application/json": components["schemas"]["TagRead"][];
                 };
@@ -502,9 +601,7 @@ export interface operations {
     };
     create_tag_api_v1_tags__post: {
         parameters: {
-            query: {
-                name: string;
-            };
+            query: { name: string };
             header?: never;
             path?: never;
             cookie?: never;
@@ -513,18 +610,14 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
+                headers: { [name: string]: unknown };
                 content: {
                     "application/json": components["schemas"]["TagRead"];
                 };
             };
             /** @description Validation Error */
             422: {
-                headers: {
-                    [name: string]: unknown;
-                };
+                headers: { [name: string]: unknown };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
@@ -533,31 +626,23 @@ export interface operations {
     };
     rename_tag_api_v1_tags__tag_id__put: {
         parameters: {
-            query: {
-                name: string;
-            };
+            query: { name: string };
             header?: never;
-            path: {
-                tag_id: number;
-            };
+            path: { tag_id: number };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
+                headers: { [name: string]: unknown };
                 content: {
                     "application/json": components["schemas"]["TagRead"];
                 };
             };
             /** @description Validation Error */
             422: {
-                headers: {
-                    [name: string]: unknown;
-                };
+                headers: { [name: string]: unknown };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
@@ -568,91 +653,19 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                tag_id: number;
-            };
+            path: { tag_id: number };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
+            204: {
+                headers: { [name: string]: unknown };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    add_tag_to_task_api_v1_tags_tasks__task_id__tags__tag_id__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                task_id: number;
-                tag_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TagRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    remove_tag_from_task_api_v1_tags_tasks__task_id__tags__tag_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                task_id: number;
-                tag_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
+                headers: { [name: string]: unknown };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };

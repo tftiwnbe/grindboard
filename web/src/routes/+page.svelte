@@ -203,9 +203,10 @@
       <div>
         <h1 class="text-2xl font-bold">Grindboard</h1>
         {#if authStore.username}
+          {@const tasks = filteredTasks()}
           <p class="text-sm text-muted-foreground">
-            {authStore.username} · {filteredTasks().length}
-            {filteredTasks().length === 1 ? "task" : "tasks"}
+            {authStore.username} · {tasks.length}
+            {tasks.length === 1 ? "task" : "tasks"}
           </p>
         {/if}
       </div>
@@ -260,17 +261,19 @@
         <div class="text-center py-12 text-muted-foreground">
           Loading tasks...
         </div>
-      {:else if filteredTasks().length === 0}
-        <div class="text-center py-12 text-muted-foreground">
-          {#if searchQuery || selectedFilterTags.length > 0}
-            Filters too strong, or you just picky?
-          {:else}
-            Nothing to see here… yet
-          {/if}
-        </div>
       {:else}
+        {@const visibleTasks = filteredTasks()}
+        {#if visibleTasks.length === 0}
+          <div class="text-center py-12 text-muted-foreground">
+            {#if searchQuery || selectedFilterTags.length > 0}
+              Filters too strong, or you just picky?
+            {:else}
+              Nothing to see here… yet
+            {/if}
+          </div>
+        {:else}
         <div class="space-y-3" role="list">
-          {#each filteredTasks() as task (task.id)}
+          {#each visibleTasks as task (task.id)}
             <TaskItem
               {task}
               tags={task.tags}
@@ -285,6 +288,7 @@
             />
           {/each}
         </div>
+        {/if}
       {/if}
 
       {#if tasksStore.error}

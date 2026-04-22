@@ -19,13 +19,11 @@ class AuthStore {
   });
 
   constructor() {
-    // Initialize from localStorage on client side
     if (typeof window !== "undefined") {
       this.initialize();
     }
   }
 
-  // Getters using $derived
   get token() {
     return this.state.token;
   }
@@ -46,7 +44,6 @@ class AuthStore {
     return this.state.error;
   }
 
-  // Initialize auth state from localStorage
   private initialize() {
     const token = localStorage.getItem("auth_token");
     const username = localStorage.getItem("username");
@@ -58,7 +55,40 @@ class AuthStore {
     }
   }
 
-  // Login user
+  async register(username: string, password: string): Promise<boolean> {
+    this.state.isLoading = true;
+    this.state.error = null;
+
+    try {
+      const { data, error } = await client.POST("/api/v1/auth/register", {
+        body: { username, password },
+      });
+
+      if (error || !data) {
+        this.state.error =
+          (error as { detail?: string })?.detail === "Username already taken"
+            ? "Username already taken"
+            : "Registration failed. Please try again.";
+        return false;
+      }
+
+      this.state.token = data.token;
+      this.state.username = username;
+      this.state.isAuthenticated = true;
+
+      localStorage.setItem("auth_token", data.token);
+      localStorage.setItem("username", username);
+
+      return true;
+    } catch (err) {
+      this.state.error = "Registration failed. Please try again.";
+      console.error("Register error:", err);
+      return false;
+    } finally {
+      this.state.isLoading = false;
+    }
+  }
+
   async login(username: string, password: string): Promise<boolean> {
     this.state.isLoading = true;
     this.state.error = null;
@@ -73,12 +103,10 @@ class AuthStore {
         return false;
       }
 
-      // Update state
       this.state.token = data.token;
       this.state.username = username;
       this.state.isAuthenticated = true;
 
-      // Persist to localStorage
       localStorage.setItem("auth_token", data.token);
       localStorage.setItem("username", username);
 
@@ -92,8 +120,15 @@ class AuthStore {
     }
   }
 
-  // Logout user
-  logout() {
+  async logout() {
+    if (this.state.token) {
+      try {
+        await client.POST("/api/v1/auth/logout", {});
+      } catch {
+        // ignore — token will expire on its own
+      }
+    }
+
     this.state.token = null;
     this.state.username = null;
     this.state.isAuthenticated = false;
@@ -105,11 +140,9 @@ class AuthStore {
     goto("/login");
   }
 
-  // Clear error message
   clearError() {
     this.state.error = null;
   }
 }
 
-// Export singleton instance
 export const authStore = new AuthStore();

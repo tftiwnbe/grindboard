@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.core.dependencies import DBSessionDep
 from app.core.security import CurrentUserDep
@@ -23,9 +23,9 @@ async def list_tags(
 
 @router.post("/", response_model=TagRead)
 async def create_tag(
-    name: str,
     current_user: CurrentUserDep,
     service: TagService = Depends(get_service),
+    name: str = Query(min_length=1, max_length=50),
 ):
     """Create a new tag."""
     return await service.create(current_user, name)
@@ -34,9 +34,9 @@ async def create_tag(
 @router.put("/{tag_id}", response_model=TagRead)
 async def rename_tag(
     tag_id: int,
-    name: str,
     current_user: CurrentUserDep,
     service: TagService = Depends(get_service),
+    name: str = Query(min_length=1, max_length=50),
 ):
     """Rename a tag."""
     tag = await service.rename(tag_id, current_user, name)
@@ -45,7 +45,7 @@ async def rename_tag(
     return tag
 
 
-@router.delete("/{tag_id}")
+@router.delete("/{tag_id}", status_code=204, response_model=None)
 async def delete_tag(
     tag_id: int,
     current_user: CurrentUserDep,
@@ -55,32 +55,4 @@ async def delete_tag(
     success = await service.delete(tag_id, current_user)
     if not success:
         raise HTTPException(status_code=404, detail="Tag not found")
-    return {"message": "Tag deleted successfully"}
-
-
-@router.post("/tasks/{task_id}/tags/{tag_id}", response_model=TagRead)
-async def add_tag_to_task(
-    task_id: int,
-    tag_id: int,
-    current_user: CurrentUserDep,
-    service: TagService = Depends(get_service),
-):
-    """Add an existing tag to a task."""
-    tag = await service.add_tag_to_task(task_id, tag_id, current_user)
-    if not tag:
-        raise HTTPException(status_code=404, detail="Task or tag not found")
-    return tag
-
-
-@router.delete("/tasks/{task_id}/tags/{tag_id}")
-async def remove_tag_from_task(
-    task_id: int,
-    tag_id: int,
-    current_user: CurrentUserDep,
-    service: TagService = Depends(get_service),
-):
-    """Remove a tag from a task."""
-    success = await service.remove_tag_from_task(task_id, tag_id, current_user)
-    if not success:
-        raise HTTPException(status_code=404, detail="Task or tag not found")
-    return {"message": "Tag removed from task"}
+    return Response(status_code=204)

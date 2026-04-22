@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 
 from app.core.dependencies import DBSessionDep
 from app.core.security import CurrentUserDep
-from app.models import TaskCreate, TaskRead, TaskUpdate
+from app.models import TagRead, TaskCreate, TaskRead, TaskUpdate
+from app.tags.service import TagService
 from app.tasks.service import TaskService
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
@@ -10,6 +11,10 @@ router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
 async def get_service(db: DBSessionDep) -> TaskService:
     return TaskService(db)
+
+
+async def get_tag_service(db: DBSessionDep) -> TagService:
+    return TagService(db)
 
 
 @router.get("/", response_model=list[TaskRead])
@@ -45,7 +50,7 @@ async def update_task(
     return task
 
 
-@router.post("/{task_id}/complete", response_model=TaskRead)
+@router.patch("/{task_id}/complete", response_model=TaskRead)
 async def toggle_task(
     task_id: int,
     current_user: CurrentUserDep,
@@ -58,17 +63,17 @@ async def toggle_task(
     return task
 
 
-@router.delete("/{task_id}", response_model=TaskRead)
+@router.delete("/{task_id}", status_code=204, response_model=None)
 async def delete_task(
     task_id: int,
     current_user: CurrentUserDep,
     service: TaskService = Depends(get_service),
 ):
     """Delete a task."""
-    task = await service.delete(task_id, current_user)
-    if not task:
+    deleted = await service.delete(task_id, current_user)
+    if not deleted:
         raise HTTPException(status_code=404, detail="Task not found")
-    return task
+    return Response(status_code=204)
 
 
 @router.post("/{task_id}/move", response_model=TaskRead)
@@ -87,3 +92,31 @@ async def move_task(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     return task
+
+
+@router.post("/{task_id}/tags/{tag_id}", response_model=TagRead)
+async def add_tag_to_task(
+    task_id: int,
+    tag_id: int,
+    current_user: CurrentUserDep,
+    service: TagService = Depends(get_tag_service),
+):
+    """Add an existing tag to a task."""
+    tag = await service.add_tag_to_task(task_id, tag_id, current_user)
+    if not tag:
+        raise HTTPException(status_code=404, detail="Task or tag not found")
+    return tag
+
+
+@router.delete("/{task_id}/tags/{tag_id}", status_code=204, response_model=None)
+async def remove_tag_from_task(
+    task_id: int,
+    tag_id: int,
+    current_user: CurrentUserDep,
+    service: TagService = Depends(get_tag_service),
+):
+    """Remove a tag from a task."""
+    success = await service.remove_tag_from_task(task_id, tag_id, current_user)
+    if not success:
+        raise HTTPException(status_code=404, detail="Task or tag not found")
+    return Response(status_code=204)

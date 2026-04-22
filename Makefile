@@ -11,7 +11,7 @@ install: ## Install development dependencies
 
 start: ## Start fastapi in dev mode
 	@echo "Starting fastapi in dev mode..."
-	uv run --group dev fastapi dev --host 0.0.0.0 --port 3000
+	uv run --group dev fastapi dev --host 127.0.0.1 --port 3000
 
 test: ## Run test suite
 	@echo "Testing application..."

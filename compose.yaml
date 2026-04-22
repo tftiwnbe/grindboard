@@ -7,5 +7,6 @@ services:
     volumes:
       - ./data:/app/data
     environment:
+      # REQUIRED: replace with a strong random value, e.g.: openssl rand -hex 32
       - GRINDBOARD__AUTH__JWT_SECRET_KEY=change_this
     restart: unless-stopped

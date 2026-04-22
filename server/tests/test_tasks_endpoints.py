@@ -16,7 +16,6 @@ class TestListTasks:
         self, client: AsyncClient, auth_headers: dict[str, str], make_task
     ):
         """Should list all tasks created by user."""
-        # Create multiple tasks
         task1 = await make_task(title="Task 1")
         task2 = await make_task(title="Task 2")
 
@@ -61,6 +60,18 @@ class TestCreateTask:
 
         assert response.status_code == 422
 
+    async def test_rejects_empty_title(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ):
+        """Should reject task with empty title."""
+        response = await client.post(
+            "/api/v1/tasks/",
+            json={"title": ""},
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+
 
 class TestUpdateTask:
     """Tests for PUT /api/v1/tasks/{id} endpoint."""
@@ -79,12 +90,11 @@ class TestUpdateTask:
 
         assert response.status_code == 200
         data = response.json()
-        # Should return full TaskRead object
         assert data["title"] == "New Title"
         assert data["id"] == task["id"]
-        assert data["description"] == "Old Description"  # Unchanged
+        assert data["description"] == "Old Description"
         assert data["completed"] is False
-        assert "tags" in data  # TaskRead includes tags
+        assert "tags" in data
 
     async def test_update_nonexistent_task(
         self, client: AsyncClient, auth_headers: dict[str, str]
@@ -98,7 +108,7 @@ class TestUpdateTask:
 
 
 class TestCompleteTask:
-    """Tests for POST /tasks/{id}/complete endpoint."""
+    """Tests for PATCH /tasks/{id}/complete endpoint."""
 
     async def test_toggles_completion_status(
         self, client: AsyncClient, auth_headers: dict[str, str], make_task
@@ -107,15 +117,13 @@ class TestCompleteTask:
         task = await make_task(title="Toggle Task")
         task_id = task["id"]
 
-        # Mark as completed
-        r1 = await client.post(
+        r1 = await client.patch(
             f"/api/v1/tasks/{task_id}/complete", headers=auth_headers
         )
         assert r1.status_code == 200
         assert r1.json()["completed"] is True
 
-        # Toggle back to incomplete
-        r2 = await client.post(
+        r2 = await client.patch(
             f"/api/v1/tasks/{task_id}/complete", headers=auth_headers
         )
         assert r2.status_code == 200
@@ -125,7 +133,7 @@ class TestCompleteTask:
         self, client: AsyncClient, auth_headers: dict[str, str]
     ):
         """Should return 404 for nonexistent task."""
-        response = await client.post(
+        response = await client.patch(
             "/api/v1/tasks/999999/complete", headers=auth_headers
         )
         assert response.status_code == 404
@@ -141,11 +149,9 @@ class TestDeleteTask:
         task = await make_task(title="Delete Me")
         task_id = task["id"]
 
-        # Delete task
         response = await client.delete(f"/api/v1/tasks/{task_id}", headers=auth_headers)
-        assert response.status_code == 200
+        assert response.status_code == 204
 
-        # Verify it's not in the list
         list_response = await client.get("/api/v1/tasks/", headers=auth_headers)
         tasks = list_response.json()
         assert not any(t["id"] == task_id for t in tasks)
@@ -165,12 +171,10 @@ class TestMoveTask:
         self, client: AsyncClient, auth_headers: dict[str, str], make_task
     ):
         """Move a task to the top of the list."""
-        # Create 3 tasks
         t1 = await make_task(title="Task 1")
         t2 = await make_task(title="Task 2")
         t3 = await make_task(title="Task 3")
 
-        # Move Task 3 to top (after_id=None)
         response = await client.post(
             f"/api/v1/tasks/{t3['id']}/move", headers=auth_headers
         )
@@ -178,11 +182,9 @@ class TestMoveTask:
         moved_task = response.json()
         assert moved_task["id"] == t3["id"]
 
-        # Verify order: Task 3 should be first
         list_response = await client.get("/api/v1/tasks/", headers=auth_headers)
         tasks = list_response.json()
         assert tasks[0]["id"] == t3["id"]
-        # Remaining tasks follow in original order
         remaining_ids = [t["id"] for t in tasks[1:]]
         assert remaining_ids == [t1["id"], t2["id"]]
 
@@ -194,7 +196,6 @@ class TestMoveTask:
         t2 = await make_task(title="Task 2")
         t3 = await make_task(title="Task 3")
 
-        # Move Task 3 after Task 1
         response = await client.post(
             f"/api/v1/tasks/{t3['id']}/move?after_id={t1['id']}", headers=auth_headers
         )
@@ -202,7 +203,6 @@ class TestMoveTask:
         moved_task = response.json()
         assert moved_task["id"] == t3["id"]
 
-        # Verify order: Task 1, Task 3, Task 2
         list_response = await client.get("/api/v1/tasks/", headers=auth_headers)
         tasks = list_response.json()
         expected_order = [t1["id"], t3["id"], t2["id"]]
@@ -235,7 +235,7 @@ class TestAuthentication:
             ("get", "/api/v1/tasks/"),
             ("post", "/api/v1/tasks/"),
             ("put", "/api/v1/tasks/1"),
-            ("post", "/api/v1/tasks/1/complete"),
+            ("patch", "/api/v1/tasks/1/complete"),
             ("delete", "/api/v1/tasks/1"),
         ],
     )

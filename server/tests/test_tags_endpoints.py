@@ -16,7 +16,6 @@ class TestListTags:
         self, client: AsyncClient, auth_headers: dict[str, str]
     ):
         """Should list all tags created by user."""
-        # Create tags
         await client.post("/api/v1/tags/?name=work", headers=auth_headers)
         await client.post("/api/v1/tags/?name=personal", headers=auth_headers)
 
@@ -46,20 +45,24 @@ class TestCreateTag:
         self, client: AsyncClient, auth_headers: dict[str, str]
     ):
         """Creating tag with same name should return existing tag."""
-        # Create tag
         r1 = await client.post("/api/v1/tags/?name=work", headers=auth_headers)
         tag1 = r1.json()
 
-        # Try to create duplicate
         r2 = await client.post("/api/v1/tags/?name=work", headers=auth_headers)
         tag2 = r2.json()
 
         assert r2.status_code == 200
         assert tag1["id"] == tag2["id"]
 
-        # Verify only one tag exists
         list_response = await client.get("/api/v1/tags/", headers=auth_headers)
         assert len(list_response.json()) == 1
+
+    async def test_rejects_empty_name(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ):
+        """Should reject empty tag name."""
+        response = await client.post("/api/v1/tags/?name=", headers=auth_headers)
+        assert response.status_code == 422
 
 
 class TestRenameTag:
@@ -67,13 +70,11 @@ class TestRenameTag:
 
     async def test_renames_tag(self, client: AsyncClient, auth_headers: dict[str, str]):
         """Should rename tag successfully."""
-        # Create tag
         create_response = await client.post(
             "/api/v1/tags/?name=old_name", headers=auth_headers
         )
         tag_id = create_response.json()["id"]
 
-        # Rename tag
         response = await client.put(
             f"/api/v1/tags/{tag_id}?name=new_name", headers=auth_headers
         )
@@ -87,29 +88,25 @@ class TestRenameTag:
         self, client: AsyncClient, auth_headers: dict[str, str], make_task
     ):
         """Renaming to existing tag name should merge tags."""
-        # Create two tags
         r1 = await client.post("/api/v1/tags/?name=tag1", headers=auth_headers)
         tag1_id = r1.json()["id"]
 
         r2 = await client.post("/api/v1/tags/?name=tag2", headers=auth_headers)
         tag2_id = r2.json()["id"]
 
-        # Create task and add tag1 to it
         task = await make_task(title="Test Task")
         await client.post(
-            f"/api/v1/tags/tasks/{task['id']}/tags/{tag1_id}", headers=auth_headers
+            f"/api/v1/tasks/{task['id']}/tags/{tag1_id}", headers=auth_headers
         )
 
-        # Rename tag2 to tag1 (should merge)
         response = await client.put(
             f"/api/v1/tags/{tag2_id}?name=tag1", headers=auth_headers
         )
         assert response.status_code == 200
         merged_tag = response.json()
         assert merged_tag["name"] == "tag1"
-        assert merged_tag["id"] == tag1_id  # Should return existing tag
+        assert merged_tag["id"] == tag1_id
 
-        # Verify only one tag exists now
         list_response = await client.get("/api/v1/tags/", headers=auth_headers)
         tags = list_response.json()
         assert len(tags) == 1
@@ -130,17 +127,14 @@ class TestDeleteTag:
 
     async def test_deletes_tag(self, client: AsyncClient, auth_headers: dict[str, str]):
         """Should delete tag."""
-        # Create tag
         create_response = await client.post(
             "/api/v1/tags/?name=to_delete", headers=auth_headers
         )
         tag_id = create_response.json()["id"]
 
-        # Delete tag
         response = await client.delete(f"/api/v1/tags/{tag_id}", headers=auth_headers)
-        assert response.status_code == 200
+        assert response.status_code == 204
 
-        # Verify it's gone
         list_response = await client.get("/api/v1/tags/", headers=auth_headers)
         tags = list_response.json()
         assert not any(t["id"] == tag_id for t in tags)
@@ -149,7 +143,6 @@ class TestDeleteTag:
         self, client: AsyncClient, auth_headers: dict[str, str], make_task
     ):
         """Deleting tag should remove it from all tasks."""
-        # Create tag and task
         tag_response = await client.post(
             "/api/v1/tags/?name=test_tag", headers=auth_headers
         )
@@ -157,15 +150,12 @@ class TestDeleteTag:
 
         task = await make_task(title="Test Task")
 
-        # Add tag to task
         await client.post(
-            f"/api/v1/tags/tasks/{task['id']}/tags/{tag_id}", headers=auth_headers
+            f"/api/v1/tasks/{task['id']}/tags/{tag_id}", headers=auth_headers
         )
 
-        # Delete tag
         await client.delete(f"/api/v1/tags/{tag_id}", headers=auth_headers)
 
-        # Task should still exist but without the tag
         task_response = await client.get("/api/v1/tasks/", headers=auth_headers)
         tasks = task_response.json()
         assert len(tasks) == 1
@@ -179,13 +169,12 @@ class TestDeleteTag:
 
 
 class TestAddTagToTask:
-    """Tests for POST /api/v1/tags/tasks/{task_id}/tags/{tag_id} endpoint."""
+    """Tests for POST /api/v1/tasks/{task_id}/tags/{tag_id} endpoint."""
 
     async def test_adds_existing_tag_to_task(
         self, client: AsyncClient, auth_headers: dict[str, str], make_task
     ):
         """Should add existing tag to task."""
-        # Create tag and task
         tag_response = await client.post(
             "/api/v1/tags/?name=important", headers=auth_headers
         )
@@ -193,9 +182,8 @@ class TestAddTagToTask:
 
         task = await make_task(title="Test Task")
 
-        # Add tag to task
         response = await client.post(
-            f"/api/v1/tags/tasks/{task['id']}/tags/{tag_id}", headers=auth_headers
+            f"/api/v1/tasks/{task['id']}/tags/{tag_id}", headers=auth_headers
         )
 
         assert response.status_code == 200
@@ -213,12 +201,11 @@ class TestAddTagToTask:
 
         task = await make_task(title="Test Task")
 
-        # Add tag twice
         r1 = await client.post(
-            f"/api/v1/tags/tasks/{task['id']}/tags/{tag_id}", headers=auth_headers
+            f"/api/v1/tasks/{task['id']}/tags/{tag_id}", headers=auth_headers
         )
         r2 = await client.post(
-            f"/api/v1/tags/tasks/{task['id']}/tags/{tag_id}", headers=auth_headers
+            f"/api/v1/tasks/{task['id']}/tags/{tag_id}", headers=auth_headers
         )
 
         assert r1.status_code == 200
@@ -234,7 +221,7 @@ class TestAddTagToTask:
         tag_id = tag_response.json()["id"]
 
         response = await client.post(
-            f"/api/v1/tags/tasks/999999/tags/{tag_id}", headers=auth_headers
+            f"/api/v1/tasks/999999/tags/{tag_id}", headers=auth_headers
         )
         assert response.status_code == 404
 
@@ -245,19 +232,18 @@ class TestAddTagToTask:
         task = await make_task(title="Test Task")
 
         response = await client.post(
-            f"/api/v1/tags/tasks/{task['id']}/tags/999999", headers=auth_headers
+            f"/api/v1/tasks/{task['id']}/tags/999999", headers=auth_headers
         )
         assert response.status_code == 404
 
 
 class TestRemoveTagFromTask:
-    """Tests for DELETE /api/v1/tags/tasks/{task_id}/tags/{tag_id} endpoint."""
+    """Tests for DELETE /api/v1/tasks/{task_id}/tags/{tag_id} endpoint."""
 
     async def test_removes_tag_from_task(
         self, client: AsyncClient, auth_headers: dict[str, str], make_task
     ):
         """Should remove tag from task."""
-        # Create tag and task, then link them
         tag_response = await client.post(
             "/api/v1/tags/?name=test", headers=auth_headers
         )
@@ -266,15 +252,14 @@ class TestRemoveTagFromTask:
         task = await make_task(title="Test Task")
 
         await client.post(
-            f"/api/v1/tags/tasks/{task['id']}/tags/{tag_id}", headers=auth_headers
+            f"/api/v1/tasks/{task['id']}/tags/{tag_id}", headers=auth_headers
         )
 
-        # Remove tag
         response = await client.delete(
-            f"/api/v1/tags/tasks/{task['id']}/tags/{tag_id}", headers=auth_headers
+            f"/api/v1/tasks/{task['id']}/tags/{tag_id}", headers=auth_headers
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 204
 
     async def test_remove_nonexistent_link(
         self, client: AsyncClient, auth_headers: dict[str, str], make_task
@@ -288,10 +273,10 @@ class TestRemoveTagFromTask:
         task = await make_task(title="Test Task")
 
         response = await client.delete(
-            f"/api/v1/tags/tasks/{task['id']}/tags/{tag_id}", headers=auth_headers
+            f"/api/v1/tasks/{task['id']}/tags/{tag_id}", headers=auth_headers
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 204
 
 
 class TestAuthentication:
@@ -304,8 +289,8 @@ class TestAuthentication:
             ("post", "/api/v1/tags/?name=test"),
             ("put", "/api/v1/tags/1?name=test"),
             ("delete", "/api/v1/tags/1"),
-            ("post", "/api/v1/tags/tasks/1/tags/1"),
-            ("delete", "/api/v1/tags/tasks/1/tags/1"),
+            ("post", "/api/v1/tasks/1/tags/1"),
+            ("delete", "/api/v1/tasks/1/tags/1"),
         ],
     )
     async def test_requires_authentication(

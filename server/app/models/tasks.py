@@ -24,13 +24,13 @@ class Task(SQLModel, table=True):
 
 
 class TaskCreate(SQLModel):
-    title: str
-    description: str = ""
+    title: str = Field(min_length=1, max_length=500)
+    description: str = Field(default="", max_length=5000)
 
 
 class TaskUpdate(SQLModel):
-    title: str | None = None
-    description: str | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=500)
+    description: str | None = Field(default=None, max_length=5000)
 
 
 class TaskRead(SQLModel):

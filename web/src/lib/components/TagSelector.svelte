@@ -35,7 +35,10 @@
     isSubmitting = false;
   }
 
-  // Reset state when component unmounts or dialog closes
+  const sortedTags = $derived(() =>
+    [...allTags].sort((a, b) => a.name.localeCompare(b.name)),
+  );
+
   $effect(() => {
     return () => {
       showCreateInput = false;
@@ -49,7 +52,7 @@
     <Label>Tags</Label>
     <div class="flex flex-wrap gap-1.5 mt-2">
       {#if allTags.length > 0}
-        {#each allTags as tag}
+        {#each sortedTags() as tag}
           {@const isSelected = selectedTags.find((t) => t.id === tag.id)}
           <Button
             type="button"

@@ -249,6 +249,8 @@ export interface components {
              * @default
              */
             description: string;
+            /** Deadline (ISO date string e.g. 2026-05-01) */
+            deadline?: string | null;
         };
         /** TaskRead */
         TaskRead: {
@@ -262,6 +264,10 @@ export interface components {
             position: number;
             /** Completed */
             completed: boolean;
+            /** CompletedAt */
+            completed_at: string | null;
+            /** Deadline (ISO date string) */
+            deadline: string | null;
             /** Tags */
             tags: components["schemas"]["TagRead"][];
         };
@@ -271,6 +277,8 @@ export interface components {
             title?: string | null;
             /** Description */
             description?: string | null;
+            /** Deadline */
+            deadline?: string | null;
         };
         /** TokenOut */
         TokenOut: {

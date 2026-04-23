@@ -21,6 +21,8 @@
       title: string,
       description: string,
       tags: Tag[],
+      deadline: string | null,
+      keepOpen: boolean,
     ) => Promise<void>;
     onCreateTag: (name: string) => Promise<void>;
     isLoading?: boolean;
@@ -40,16 +42,18 @@
 
   let title = $state("");
   let description = $state("");
+  let deadline = $state("");
 
-  // Initialize form when dialog opens or task changes
   $effect(() => {
     if (open) {
       if (dialogMode === "edit" && task) {
         title = task.title;
-        description = task.description || "";
+        description = task.description ?? "";
+        deadline = task.deadline ?? "";
       } else if (dialogMode === "create") {
         title = "";
         description = "";
+        deadline = "";
       }
     }
   });
@@ -62,36 +66,38 @@
     }
   }
 
-  async function handleSubmit(e: SubmitEvent) {
+  async function handleSubmit(e: SubmitEvent, keepOpen: boolean) {
     e.preventDefault();
     if (!title.trim()) return;
-    await onSubmit(title, description, selectedTags);
-    // Clear form after successful submit
-    title = "";
-    description = "";
+    await onSubmit(title.trim(), description, selectedTags, deadline || null, keepOpen);
+    if (keepOpen) {
+      title = "";
+      description = "";
+      deadline = "";
+      selectedTags = [];
+    }
   }
 
   function handleClose() {
     title = "";
     description = "";
+    deadline = "";
     onClose();
   }
+
+  const todayISO = new Date().toISOString().split("T")[0];
 </script>
 
 <Dialog.Root bind:open>
   <Dialog.Content class="max-w-md">
     <Dialog.Header>
-      <Dialog.Title
-        >{dialogMode === "create" ? "Create Task" : "Edit Task"}</Dialog.Title
-      >
+      <Dialog.Title>{dialogMode === "create" ? "Create Task" : "Edit Task"}</Dialog.Title>
       <Dialog.Description>
-        {dialogMode === "create"
-          ? "Add a new task to your list"
-          : "Update task details"}
+        {dialogMode === "create" ? "Add a new task to your list" : "Update task details"}
       </Dialog.Description>
     </Dialog.Header>
-    <form onsubmit={handleSubmit} class="space-y-4">
-      <div class="space-y-2">
+    <form onsubmit={(e) => handleSubmit(e, false)} class="space-y-3">
+      <div class="space-y-1.5">
         <Label for="task-title">Title</Label>
         <Input
           id="task-title"
@@ -101,14 +107,26 @@
           required
         />
       </div>
-      <div class="space-y-2">
+
+      <div class="space-y-1.5">
         <Label for="task-description">Description</Label>
         <Textarea
           id="task-description"
           bind:value={description}
           placeholder="Description (optional)"
-          rows={3}
-        ></Textarea>
+          rows={2}
+        />
+      </div>
+
+      <div class="space-y-1.5">
+        <Label for="task-deadline">Deadline</Label>
+        <Input
+          id="task-deadline"
+          type="date"
+          bind:value={deadline}
+          min={todayISO}
+          class="w-full"
+        />
       </div>
 
       <TagSelector
@@ -118,12 +136,23 @@
         {onCreateTag}
       />
 
-      <Dialog.Footer>
-        <Button type="button" variant="outline" onclick={handleClose}>
+      <Dialog.Footer class="flex gap-2 pt-1">
+        <Button type="button" variant="outline" onclick={handleClose} class="flex-1">
           Cancel
         </Button>
-        <Button type="submit" disabled={isLoading}>
-          {dialogMode === "create" ? "Create" : "Update"}
+        {#if dialogMode === "create"}
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isLoading}
+            onclick={(e) => handleSubmit(e as unknown as SubmitEvent, true)}
+            class="flex-1"
+          >
+            {isLoading ? "Saving…" : "One more"}
+          </Button>
+        {/if}
+        <Button type="submit" disabled={isLoading} class="flex-1">
+          {isLoading ? "Saving…" : dialogMode === "create" ? "Create" : "Update"}
         </Button>
       </Dialog.Footer>
     </form>

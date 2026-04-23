@@ -45,63 +45,92 @@
     onDragOver?.(task.id);
   }
 
-  function handleDragEnd() {
-    onDragEnd?.();
+  function handleDrop(e: DragEvent) { e.preventDefault(); }
+
+  function formatCompletedAt(iso: string): string {
+    const d = new Date(iso);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffDays = Math.floor(diffMs / 86_400_000);
+    if (diffDays === 0) return "Completed today";
+    if (diffDays === 1) return "Completed yesterday";
+    if (diffDays < 7) return `Completed ${diffDays} days ago`;
+    return `Completed ${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
   }
 
-  function handleDrop(e: DragEvent) {
-    e.preventDefault();
+  function deadlineLabel(iso: string): { text: string; urgent: boolean; overdue: boolean } {
+    const deadline = new Date(iso + "T00:00:00");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((deadline.getTime() - today.getTime()) / 86_400_000);
+    if (diffDays < 0) return { text: `Overdue · ${deadline.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`, urgent: false, overdue: true };
+    if (diffDays === 0) return { text: "Due today", urgent: true, overdue: false };
+    if (diffDays === 1) return { text: "Due tomorrow", urgent: true, overdue: false };
+    return { text: `Due ${deadline.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`, urgent: false, overdue: false };
   }
 </script>
 
 <div
   role="listitem"
-  class="border rounded-lg bg-card p-4 transition-opacity cursor-move"
-  class:opacity-50={isDragging}
+  class="border rounded bg-card px-3 py-2 transition-opacity cursor-move"
+  class:opacity-40={isDragging}
   class:border-primary={isDragOver}
   class:border-2={isDragOver}
   draggable="true"
   ondragstart={handleDragStart}
   ondragover={handleDragOver}
-  ondragend={handleDragEnd}
+  ondragend={onDragEnd}
   ondrop={handleDrop}
 >
-  <div class="flex items-start gap-3">
+  <div class="flex items-start gap-2">
     <Checkbox
       checked={task.completed}
       onCheckedChange={() => onToggle(task.id)}
-      class="mt-1"
+      class="mt-0.5 shrink-0"
     />
 
     <button class="flex-1 min-w-0 text-left" onclick={() => onEdit(task)}>
-      <h3
-        class="font-medium text-base leading-snug"
+      <p
+        class="text-sm font-medium leading-snug"
         class:line-through={task.completed}
         class:text-muted-foreground={task.completed}
       >
         {task.title}
-      </h3>
+      </p>
+
       {#if task.description}
         <p
-          class="text-sm text-muted-foreground mt-1 whitespace-pre-wrap"
+          class="text-xs text-muted-foreground mt-0.5 whitespace-pre-wrap"
           class:line-through={task.completed}
         >
           {task.description}
         </p>
       {/if}
 
-      <!-- Tags Display -->
+      {#if !task.completed && task.deadline}
+        {@const dl = deadlineLabel(task.deadline)}
+        <p
+          class="text-xs mt-1"
+          class:text-destructive={dl.overdue}
+          class:text-amber-500={dl.urgent && !dl.overdue}
+          class:text-muted-foreground={!dl.overdue && !dl.urgent}
+        >
+          {dl.text}
+        </p>
+      {/if}
+
+      {#if task.completed && task.completed_at}
+        <p class="text-xs text-muted-foreground mt-0.5">
+          {formatCompletedAt(task.completed_at)}
+        </p>
+      {/if}
+
       {#if tags.length > 0}
-        <div class="flex flex-wrap gap-1.5 mt-3">
+        <div class="flex flex-wrap gap-1 mt-1.5">
           {#each tags as tag (tag.id)}
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              class="h-6 text-xs px-2 pointer-events-none"
-            >
+            <span class="text-xs px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground">
               {tag.name}
-            </Button>
+            </span>
           {/each}
         </div>
       {/if}
@@ -111,9 +140,9 @@
       variant="ghost"
       size="icon"
       onclick={() => onDelete(task.id)}
-      class="shrink-0 -mt-1"
+      class="shrink-0 h-7 w-7 -mt-0.5"
     >
-      <TrashIcon class="size-4 text-muted-foreground" />
+      <TrashIcon class="size-3.5 text-muted-foreground" />
     </Button>
   </div>
 </div>

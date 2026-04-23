@@ -17,6 +17,7 @@
 
   interface Props {
     searchQuery: string;
+    searchInputEl?: HTMLInputElement | null;
     selectedFilterTags: number[];
     allTags: Tag[];
     allTasks: Task[];
@@ -30,6 +31,7 @@
 
   let {
     searchQuery = $bindable(),
+    searchInputEl = $bindable(),
     selectedFilterTags,
     allTags,
     allTasks,
@@ -82,7 +84,8 @@
   <div class="flex items-center gap-2">
     <Input
       bind:value={searchQuery}
-      placeholder="Search tasks..."
+      bind:ref={searchInputEl}
+      placeholder="Search tasks…"
       class="flex-1 text-base"
     />
 

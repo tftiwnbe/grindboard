@@ -116,6 +116,7 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    touch-action: manipulation;
   }
   body {
     @apply bg-background font-sans text-foreground overflow-hidden;

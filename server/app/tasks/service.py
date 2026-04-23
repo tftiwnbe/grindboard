@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from sqlalchemy.orm import selectinload
 from sqlmodel import asc, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -64,6 +65,7 @@ class TaskService:
         if not task:
             return None
         task.completed = not task.completed
+        task.completed_at = datetime.now(timezone.utc) if task.completed else None
         self.session.add(task)
         await self.session.commit()
         await self.session.refresh(task, attribute_names=["tags"])
@@ -149,6 +151,8 @@ class TaskService:
             description=task.description,
             position=task.position,
             completed=task.completed,
+            completed_at=task.completed_at,
+            deadline=task.deadline,
             tags=[
                 TagRead(id=tag.id, name=tag.name)
                 for tag in task.tags

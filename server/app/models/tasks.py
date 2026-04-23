@@ -1,3 +1,4 @@
+from datetime import date, datetime
 from typing import Any, ClassVar
 
 from sqlalchemy.orm import Mapped
@@ -15,6 +16,8 @@ class Task(SQLModel, table=True):
     description: str = Field(default="")
     position: float = Field(default=0.0, index=True)
     completed: bool = Field(default=False)
+    completed_at: datetime | None = Field(default=None, nullable=True)
+    deadline: date | None = Field(default=None, nullable=True)
 
     tags: Mapped[list[Tag]] = Relationship(
         back_populates="tasks", link_model=TaskTagLink
@@ -26,11 +29,13 @@ class Task(SQLModel, table=True):
 class TaskCreate(SQLModel):
     title: str = Field(min_length=1, max_length=500)
     description: str = Field(default="", max_length=5000)
+    deadline: date | None = None
 
 
 class TaskUpdate(SQLModel):
     title: str | None = Field(default=None, min_length=1, max_length=500)
     description: str | None = Field(default=None, max_length=5000)
+    deadline: date | None = None
 
 
 class TaskRead(SQLModel):
@@ -39,4 +44,6 @@ class TaskRead(SQLModel):
     description: str
     position: float
     completed: bool
+    completed_at: datetime | None
+    deadline: date | None
     tags: list[TagRead]

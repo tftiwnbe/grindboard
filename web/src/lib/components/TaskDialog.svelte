@@ -5,6 +5,7 @@
   import { Input } from "$lib/elements/input/index.js";
   import { Label } from "$lib/elements/label/index.js";
   import { Textarea } from "$lib/elements/textarea/index.js";
+  import { XIcon } from "@lucide/svelte/icons";
   import TagSelector from "./TagSelector.svelte";
 
   type Task = components["schemas"]["TaskRead"];
@@ -85,7 +86,7 @@
     onClose();
   }
 
-  const todayISO = new Date().toISOString().split("T")[0];
+
 </script>
 
 <Dialog.Root bind:open>
@@ -120,13 +121,24 @@
 
       <div class="space-y-1.5">
         <Label for="task-deadline">Deadline</Label>
-        <Input
-          id="task-deadline"
-          type="date"
-          bind:value={deadline}
-          min={todayISO}
-          class="w-full"
-        />
+        <div class="relative">
+          <Input
+            id="task-deadline"
+            type="date"
+            bind:value={deadline}
+            class="w-full {deadline ? 'pr-8' : ''}"
+          />
+          {#if deadline}
+            <button
+              type="button"
+              onclick={() => (deadline = "")}
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              aria-label="Clear deadline"
+            >
+              <XIcon class="size-4" />
+            </button>
+          {/if}
+        </div>
       </div>
 
       <TagSelector

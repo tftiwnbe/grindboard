@@ -30,10 +30,6 @@
   let editingTagName = $state("");
   let isSaving = $state(false);
 
-  const sortedTags = $derived(() =>
-    [...tags].sort((a, b) => a.name.localeCompare(b.name)),
-  );
-
   async function handleCreate() {
     if (!newTagName.trim() || isSaving) return;
     isSaving = true;
@@ -88,7 +84,7 @@
         </p>
       {:else}
         <div class="space-y-1.5 max-h-[50vh] overflow-y-auto">
-          {#each sortedTags() as tag (tag.id)}
+          {#each tags as tag (tag.id)}
             <div class="flex items-center gap-2 p-2 border rounded">
               {#if editingTagId === tag.id}
                 <Input

@@ -61,6 +61,15 @@
   // Search input element ref for "/" shortcut
   let searchInputEl = $state<HTMLInputElement | null>(null);
 
+  const tagsSortedByCount = $derived(() => {
+    const allTasks = tasksStore.tasks;
+    return [...tagsStore.tags].sort((a, b) => {
+      const aCount = allTasks.filter((t) => t.tags.some((tag) => tag.id === a.id)).length;
+      const bCount = allTasks.filter((t) => t.tags.some((tag) => tag.id === b.id)).length;
+      return bCount - aCount;
+    });
+  });
+
   const filteredTasks = $derived(() => {
     let result = tasksStore.getSortedTasks();
     if (searchQuery.trim()) {
@@ -319,7 +328,7 @@
     bind:open={showTaskDialog}
     {dialogMode}
     task={editingTask}
-    allTags={tagsStore.tags}
+    allTags={tagsSortedByCount()}
     bind:selectedTags={selectedDialogTags}
     onClose={() => (showTaskDialog = false)}
     onSubmit={handleSubmitTask}
@@ -329,7 +338,7 @@
 
   <TagManager
     bind:open={showTagManager}
-    tags={tagsStore.tags}
+    tags={tagsSortedByCount()}
     onClose={() => (showTagManager = false)}
     onCreate={handleCreateTagInManager}
     onUpdate={handleUpdateTag}

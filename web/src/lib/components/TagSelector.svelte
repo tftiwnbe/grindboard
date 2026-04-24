@@ -35,10 +35,6 @@
     isSubmitting = false;
   }
 
-  const sortedTags = $derived(() =>
-    [...allTags].sort((a, b) => a.name.localeCompare(b.name)),
-  );
-
   $effect(() => {
     return () => {
       showCreateInput = false;
@@ -52,7 +48,7 @@
     <Label>Tags</Label>
     <div class="flex flex-wrap gap-1.5 mt-2">
       {#if allTags.length > 0}
-        {#each sortedTags() as tag}
+        {#each allTags as tag}
           {@const isSelected = selectedTags.find((t) => t.id === tag.id)}
           <Button
             type="button"

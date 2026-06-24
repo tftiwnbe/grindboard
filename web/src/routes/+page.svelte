@@ -145,7 +145,6 @@
 
     isTaskSaving = false;
     if (!keepOpen) showTaskDialog = false;
-    await tagsStore.fetchTags();
   }
 
   async function handleCreateTag(name: string) {

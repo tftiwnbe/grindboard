@@ -1,5 +1,6 @@
 import type { components } from "$lib/api/v1";
 import client from "$lib/api/client";
+import { tasksStore } from "./tasks.svelte";
 
 type Tag = components["schemas"]["TagRead"];
 
@@ -65,7 +66,7 @@ class TagsStore {
         return null;
       }
 
-      await this.fetchTags();
+      this.state.tags = [...this.state.tags, data];
       return data;
     } catch (err) {
       this.state.error = "Failed to create tag";
@@ -88,10 +89,10 @@ class TagsStore {
         return false;
       }
 
-      await this.fetchTags();
-      // Also refresh tasks to update tag names in task views
-      const { tasksStore } = await import("./tasks.svelte");
-      await tasksStore.fetchTasks();
+      this.state.tags = this.state.tags.map((tag) =>
+        tag.id === tagId ? { ...tag, name } : tag,
+      );
+      tasksStore.renameTag(tagId, name);
       return true;
     } catch (err) {
       this.state.error = "Failed to update tag";
@@ -114,10 +115,8 @@ class TagsStore {
         return false;
       }
 
-      await this.fetchTags();
-      // Also refresh tasks to remove deleted tags from task views
-      const { tasksStore } = await import("./tasks.svelte");
-      await tasksStore.fetchTasks();
+      this.state.tags = this.state.tags.filter((tag) => tag.id !== tagId);
+      tasksStore.removeTag(tagId);
       return true;
     } catch (err) {
       this.state.error = "Failed to delete tag";

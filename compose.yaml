@@ -10,3 +10,9 @@ services:
       # REQUIRED: replace with a strong random value, e.g.: openssl rand -hex 32
       - GRINDBOARD__AUTH__JWT_SECRET_KEY=change_this
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/healthz').read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

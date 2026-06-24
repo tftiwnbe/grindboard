@@ -4,6 +4,7 @@ from typing import Callable
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -57,6 +58,14 @@ async def add_security_headers(request: Request, call_next: Callable) -> Respons
     for header, value in _SECURITY_HEADERS.items():
         response.headers[header] = value
     return response
+
+
+@app.get("/healthz", include_in_schema=False)
+async def healthcheck() -> dict[str, str]:
+    """Report application and database readiness for smoke tests and probes."""
+    async with sessionmanager.connect() as connection:
+        await connection.execute(text("SELECT 1"))
+    return {"status": "ok"}
 
 
 app.include_router(users_router, prefix="/api/v1")

@@ -86,8 +86,21 @@ jobs:
 
       - name: Test Docker image
         run: |
-          docker run --rm -d --name grindboard-test -p 3000:3000 grindboard:test
-          sleep 5
-          docker ps | grep grindboard-test
-          docker logs grindboard-test
-          docker stop grindboard-test
+          docker run --rm -d --name grindboard-test \
+            -e GRINDBOARD__AUTH__JWT_SECRET_KEY=ci-test-secret \
+            -p 3000:3000 \
+            grindboard:test
+
+          cleanup() {
+            docker logs grindboard-test || true
+            docker stop grindboard-test || true
+          }
+          trap cleanup EXIT
+
+          curl --fail --silent --show-error \
+            --retry 15 \
+            --retry-all-errors \
+            --retry-delay 1 \
+            http://127.0.0.1:3000/healthz
+
+          test "$(docker inspect --format='{{.State.Health.Status}}' grindboard-test)" = "healthy"

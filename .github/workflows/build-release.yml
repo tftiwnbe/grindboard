@@ -72,7 +72,7 @@ jobs:
             VCS_REF=${{ github.sha }}
 
   release:
-    needs: build
+    needs: [build, scan-image]
     runs-on: ubuntu-latest
 
     steps:

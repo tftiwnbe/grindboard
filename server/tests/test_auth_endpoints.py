@@ -2,6 +2,16 @@ import pytest
 from httpx import AsyncClient
 
 
+class TestHealthcheck:
+    """Tests for GET /healthz endpoint."""
+
+    async def test_healthcheck_is_public_and_reports_ok(self, client: AsyncClient):
+        response = await client.get("/healthz")
+
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
+
+
 class TestRegister:
     """Tests for POST /auth/register endpoint."""
 

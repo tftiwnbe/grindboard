@@ -2,14 +2,15 @@ import uvicorn
 from contextlib import asynccontextmanager
 from typing import Callable
 
-from fastapi import FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Request, Response
+from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.config import get_settings
-from app.core.database import sessionmanager, run_async_upgrade
+from app.core.database import get_database_session, sessionmanager, run_async_upgrade
 from app.core.limiter import limiter
 from app.tasks.router import router as tasks_router
 from app.users.router import router as users_router
@@ -61,10 +62,11 @@ async def add_security_headers(request: Request, call_next: Callable) -> Respons
 
 
 @app.get("/healthz", include_in_schema=False)
-async def healthcheck() -> dict[str, str]:
+async def healthcheck(
+    db: AsyncSession = Depends(get_database_session),
+) -> dict[str, str]:
     """Report application and database readiness for smoke tests and probes."""
-    async with sessionmanager.connect() as connection:
-        await connection.execute(text("SELECT 1"))
+    await db.execute(text("SELECT 1"))
     return {"status": "ok"}
 
 

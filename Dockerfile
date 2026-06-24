@@ -1,7 +1,7 @@
 # Stage 1: Build frontend
 FROM node:20-alpine AS frontend-build
 WORKDIR /app/web
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@9 --activate
 COPY web/pnpm-lock.yaml web/package.json ./
 COPY web/pnpm-workspace.yaml ./pnpm-workspace.yaml
 RUN pnpm install --frozen-lockfile

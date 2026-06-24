@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from typing import Any, ClassVar
 
+from sqlalchemy import Index
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -10,6 +11,7 @@ from app.models.users import User
 
 class Task(SQLModel, table=True):
     __tablename__: ClassVar[Any] = "tasks"
+    __table_args__ = (Index("ix_tasks_user_id_position", "user_id", "position"),)
 
     id: int = Field(primary_key=True)
     title: str = Field(index=True)

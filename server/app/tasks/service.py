@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from collections.abc import Sequence
 from sqlalchemy.orm import selectinload
 from sqlmodel import asc, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -98,51 +99,78 @@ class TaskService:
         if not task:
             return None
 
-        stmt = (
-            select(Task)
-            .where(Task.user_id == user.id, Task.id != task_id)
-            .order_by(asc(Task.position))
-        )
-        other_tasks = (await self.session.scalars(stmt)).all()
-
         if after_id is None:
-            first_task = other_tasks[0] if other_tasks else None
+            first_task = await self._fetch_neighbor(
+                user.id,
+                task_id,
+                order_by=asc(Task.position),
+            )
             task.position = first_task.position - 1.0 if first_task else 0.0
+            needs_rebalance = False
         else:
             if after_id == task_id:
                 await self.session.refresh(task, attribute_names=["tags"])
                 return self._to_read(task)
 
-            after_task = next((t for t in other_tasks if t.id == after_id), None)
+            after_task = await self._fetch_neighbor(
+                user.id,
+                task_id,
+                task_filter=Task.id == after_id,
+                order_by=asc(Task.position),
+            )
             if not after_task:
                 return None
 
-            after_index = other_tasks.index(after_task)
-            next_task = other_tasks[after_index + 1] if after_index + 1 < len(other_tasks) else None
+            next_task = await self._fetch_neighbor(
+                user.id,
+                task_id,
+                task_filter=Task.position > after_task.position,
+                order_by=asc(Task.position),
+            )
 
             task.position = (
                 (after_task.position + next_task.position) / 2
                 if next_task
                 else after_task.position + 1.0
             )
+            needs_rebalance = (
+                next_task is not None
+                and (next_task.position - after_task.position) < (REBALANCE_THRESHOLD * 2)
+            )
 
         self.session.add(task)
 
-        all_tasks = sorted(
-            list(other_tasks) + [task], key=lambda t: t.position
-        )
-        needs_rebalance = any(
-            abs(all_tasks[i + 1].position - all_tasks[i].position) < REBALANCE_THRESHOLD
-            for i in range(len(all_tasks) - 1)
-        )
         if needs_rebalance:
-            for i, t in enumerate(all_tasks, start=1):
+            for i, t in enumerate(await self._list_tasks_for_rebalance(user.id), start=1):
                 t.position = float(i)
                 self.session.add(t)
 
         await self.session.commit()
         await self.session.refresh(task, attribute_names=["tags"])
         return self._to_read(task)
+
+    async def _fetch_neighbor(
+        self,
+        user_id: int | None,
+        task_id: int,
+        *,
+        order_by,
+        task_filter=None,
+    ) -> Task | None:
+        stmt = (
+            select(Task)
+            .where(Task.user_id == user_id, Task.id != task_id)
+            .order_by(order_by)
+            .limit(1)
+        )
+        if task_filter is not None:
+            stmt = stmt.where(task_filter)
+
+        return (await self.session.scalars(stmt)).first()
+
+    async def _list_tasks_for_rebalance(self, user_id: int | None) -> Sequence[Task]:
+        stmt = select(Task).where(Task.user_id == user_id).order_by(asc(Task.position))
+        return (await self.session.scalars(stmt)).all()
 
     def _to_read(self, task: Task) -> TaskRead:
         return TaskRead(
